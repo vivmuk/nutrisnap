@@ -1,12 +1,11 @@
-# Migration Guide: Google Gemini to Venice AI with MongoDB
+# Migration Guide: Previous Implementation to Venice AI with MongoDB
 
-This guide documents the migration from Google Gemini API to Venice AI API using the Mistral model, and the transition from localStorage to MongoDB.
+This guide documents the migration to Venice AI API using the Mistral model, and the transition from localStorage to MongoDB.
 
 ## Overview of Changes
 
 ### 1. API Migration
-- **From**: Google Gemini API (`@google/genai`)
-- **To**: Venice AI API with Mistral model (`mistral-31-24b`)
+- **Current**: Venice AI API with Mistral model (`mistral-31-24b`)
 - **Model**: `mistral-31-24b` - Supports vision capabilities for image analysis
 
 ### 2. Database Migration
@@ -94,8 +93,8 @@ The frontend will start on `http://localhost:3000`
 
 ## Key Changes in Code
 
-### 1. API Service (`services/geminiService.ts`)
-- **Before**: Direct calls to Google Gemini API
+### 1. API Service (`services/imageService.ts`)
+- **Before**: Direct API calls from frontend
 - **After**: HTTP requests to backend API endpoint `/api/analyze`
 
 ### 2. Log Service (`services/logService.ts`)
@@ -106,7 +105,7 @@ The frontend will start on `http://localhost:3000`
   - `DELETE /api/food-logs/:id` - Delete log
 
 ### 3. Constants (`constants.ts`)
-- **Before**: Google GenAI Type enum format
+- **Before**: Previous API format
 - **After**: Standard JSON Schema format for Venice API
 
 ### 4. Backend Structure
@@ -181,14 +180,14 @@ Venice API uses JSON Schema for structured responses, which is compatible with t
 
 ## Migration Checklist
 
-- [x] Replace Google Gemini API with Venice API
+- [x] Implement Venice API integration
 - [x] Set up Express backend server
 - [x] Configure MongoDB connection
 - [x] Create Mongoose models
 - [x] Update frontend to use backend API
 - [x] Convert response schema to JSON Schema format
 - [x] Update environment variables
-- [x] Remove Google GenAI dependencies
+- [x] Remove old API dependencies
 - [x] Update async/await handling in frontend
 - [ ] Test image analysis functionality
 - [ ] Test food log CRUD operations

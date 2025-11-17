@@ -127,9 +127,9 @@ Add a new food log
 ### DELETE `/api/food-logs/:id`
 Delete a food log by ID
 
-## Migration from Google Gemini
+## Technology Stack
 
-This project has been migrated from Google Gemini API to Venice AI. See [MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md) for detailed migration information.
+This project uses Venice AI (Mistral 31-24B model) for image analysis. For migration information from other platforms, see [MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md).
 
 ## License
 
