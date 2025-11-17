@@ -27,7 +27,7 @@ router.post('/', async (req: Request, res: Response) => {
     });
 
     // Validate the response structure before sending
-    if (!result || !result.macroNutrients || !result.macroNutrients.protein) {
+    if (!result || !result.macroNutrients || typeof result.macroNutrients.protein !== 'number') {
       console.error('Invalid response structure:', JSON.stringify(result, null, 2));
       return res.status(500).json({
         error: 'Invalid response from AI model',

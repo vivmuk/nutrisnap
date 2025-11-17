@@ -150,9 +150,9 @@ const transformResponseToSchema = (response: any): NutritionalReport => {
 };
 
 // Step 2: Format extracted information according to strict schema
-// Use zai-org-glm-4.6 for formatting (better structured output support)
+// Use qwen3-4b for formatting (better structured output support)
 const formatToSchema = async (extractedInfo: string): Promise<NutritionalReport> => {
-  const formattingModel = 'zai-org-glm-4.6'; // Dedicated model for JSON formatting
+  const formattingModel = 'qwen3-4b'; // Dedicated model for JSON formatting
   const formattingPrompt = `You are a nutritionist assistant. Format the following nutritional information into the exact JSON schema required.
 
 EXTRACTED INFORMATION:
@@ -224,7 +224,14 @@ Return ONLY valid JSON matching the schema.`;
   
   try {
     const data = JSON.parse(jsonText);
-    // Transform the response to match our expected schema
+    
+    // Check if data already matches our schema (qwen3-4b might return correct format)
+    if (data.macroNutrients && typeof data.macroNutrients.protein === 'number') {
+      console.log(`Model ${formattingModel} - Response already matches schema format`);
+      return data as NutritionalReport;
+    }
+    
+    // Transform the response to match our expected schema (for models that return different format)
     const transformed = transformResponseToSchema(data);
     console.log(`Model ${formattingModel} - Successfully transformed response to schema`);
     return transformed;
@@ -297,7 +304,7 @@ export const analyzeImageWithVenice = async (image: ImagePart): Promise<Nutritio
         console.log(`Step 2: Formatting information to schema...`);
         try {
           const formattedData = await formatToSchema(extractedInfo);
-          console.log(`Successfully analyzed image with ${model} and formatted with zai-org-glm-4.6`);
+          console.log(`Successfully analyzed image with ${model} and formatted with qwen3-4b`);
           return formattedData;
         } catch (formatError: any) {
           console.error(`Formatting failed:`, formatError.message);
