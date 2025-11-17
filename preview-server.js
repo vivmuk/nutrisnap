@@ -31,7 +31,13 @@ try {
     preview: {
       port,
       host: '0.0.0.0',
-      allowedHosts: 'all',
+      allowedHosts: [
+        'all',
+        '.railway.app',
+        '.up.railway.app',
+        'nutriviv.up.railway.app',
+        'gracious-creation-production.up.railway.app',
+      ],
       strictPort: false,
     },
     build: {
