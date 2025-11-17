@@ -23,7 +23,7 @@ interface ImagePart {
 export const analyzeImageWithVenice = async (image: ImagePart): Promise<NutritionalReport> => {
   // Try primary model first, then fallback
   // google-gemma-3-27b-it is a vision model, so it's our primary choice
-  const models = ['google-gemma-3-27b-it', 'mistral-31-24b', 'qwen-2.5-vl', 'mistral-32-24b'];
+  const models = ['google-gemma-3-27b-it', 'mistral-31-24b'];
   
   for (const model of models) {
     try {
