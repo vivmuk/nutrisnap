@@ -9,6 +9,10 @@ export default defineConfig(({ mode }) => {
         port: 3000,
         host: '0.0.0.0',
       },
+      preview: {
+        port: process.env.PORT ? parseInt(process.env.PORT) : 3000,
+        host: '0.0.0.0',
+      },
       plugins: [react()],
       define: {
         'import.meta.env.VITE_API_BASE_URL': JSON.stringify(env.VITE_API_BASE_URL || 'http://localhost:3001'),
