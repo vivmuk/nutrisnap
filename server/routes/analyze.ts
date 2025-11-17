@@ -8,11 +8,12 @@ interface AnalyzeRequest {
     data: string; // base64 encoded string
     mimeType: string;
   };
+  foodName?: string; // Optional food name to guide analysis
 }
 
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { image }: AnalyzeRequest = req.body;
+    const { image, foodName }: AnalyzeRequest = req.body;
 
     if (!image || !image.data || !image.mimeType) {
       return res.status(400).json({ 
@@ -20,11 +21,11 @@ router.post('/', async (req: Request, res: Response) => {
       });
     }
 
-    console.log('Received image analysis request');
+    console.log('Received image analysis request', foodName ? `with food name: ${foodName}` : '');
     const result = await analyzeImageWithVenice({
       data: image.data,
       mimeType: image.mimeType,
-    });
+    }, foodName);
 
     // Validate the response structure before sending
     if (!result || !result.macroNutrients || typeof result.macroNutrients.protein !== 'number') {

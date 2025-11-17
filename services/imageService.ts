@@ -8,7 +8,7 @@ interface ImagePart {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
-export const analyzeImage = async (image: ImagePart): Promise<NutritionalReport> => {
+export const analyzeImage = async (image: ImagePart, foodName?: string): Promise<NutritionalReport> => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minutes timeout
 
@@ -18,7 +18,7 @@ export const analyzeImage = async (image: ImagePart): Promise<NutritionalReport>
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ image }),
+      body: JSON.stringify({ image, foodName }),
       signal: controller.signal,
     });
 

@@ -1,7 +1,7 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 
 interface ImageSelectorProps {
-  onStartAnalysis: (file: File) => void;
+  onStartAnalysis: (file: File, foodName?: string) => void;
   onManualAdd: () => void;
   onSwitchToDashboard: () => void;
 }
@@ -31,11 +31,13 @@ const ChartBarIcon: React.FC<{ className?: string }> = ({ className }) => (
 const ImageSelector: React.FC<ImageSelectorProps> = ({ onStartAnalysis, onManualAdd, onSwitchToDashboard }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const [foodName, setFoodName] = useState<string>('');
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      onStartAnalysis(file);
+      onStartAnalysis(file, foodName.trim() || undefined);
+      setFoodName(''); // Reset after analysis starts
     }
   };
 
@@ -46,6 +48,22 @@ const ImageSelector: React.FC<ImageSelectorProps> = ({ onStartAnalysis, onManual
           <h3 className="mt-2 text-xl font-medium text-gray-200">Analyze a New Meal</h3>
           <p>Upload a photo or use your camera.</p>
         </div>
+
+      {/* Optional food name input */}
+      <div className="w-full max-w-md">
+        <label htmlFor="foodName" className="block text-sm font-medium text-gray-300 mb-2">
+          Food Name (Optional)
+        </label>
+        <input
+          type="text"
+          id="foodName"
+          value={foodName}
+          onChange={(e) => setFoodName(e.target.value)}
+          placeholder="e.g., Biryani, Pad Thai, Tacos al Pastor..."
+          className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+        />
+        <p className="mt-1 text-xs text-gray-500">Help the AI identify regional or cultural dishes</p>
+      </div>
 
       <div className="flex flex-col sm:flex-row gap-4 w-full justify-center max-w-md">
         <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />

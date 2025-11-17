@@ -26,11 +26,15 @@ interface ImagePart {
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Step 1: Extract information from image (no strict schema)
-const extractNutritionalInfo = async (model: string, imageUrl: string): Promise<string> => {
-  const extractionPrompt = `As an expert nutritionist, analyze this food image and extract ALL nutritional information in a detailed, structured format. 
+const extractNutritionalInfo = async (model: string, imageUrl: string, foodName?: string): Promise<string> => {
+  const foodNameContext = foodName 
+    ? `\n\nIMPORTANT CONTEXT: The user has indicated this dish may be called "${foodName}". Please use this information to help identify regional or cultural variations, traditional preparation methods, and authentic ingredients. This is especially helpful for regional cuisines from different parts of the world. However, still verify what you see in the image and provide accurate nutritional information based on the actual visual content.`
+    : '';
+
+  const extractionPrompt = `As an expert nutritionist, analyze this food image and extract ALL nutritional information in a detailed, structured format.${foodNameContext}
 
 Provide a comprehensive analysis including:
-- Dish name and description
+- Dish name and description (use the provided context if helpful, but verify with the image)
 - All visible foods and ingredients
 - Estimated portion sizes and weights
 - Complete macronutrient breakdown (protein, carbs with fiber/sugars, fats with saturated/unsaturated)
@@ -273,7 +277,7 @@ Return ONLY valid JSON matching the schema.`;
   }
 };
 
-export const analyzeImageWithVenice = async (image: ImagePart): Promise<NutritionalReport> => {
+export const analyzeImageWithVenice = async (image: ImagePart, foodName?: string): Promise<NutritionalReport> => {
   // Using google-gemma-3-27b-it as primary, mistral-31-24b as fallback
   const models = ['google-gemma-3-27b-it', 'mistral-31-24b'];
   
@@ -290,10 +294,10 @@ export const analyzeImageWithVenice = async (image: ImagePart): Promise<Nutritio
         const imageUrl = `data:${image.mimeType};base64,${image.data}`;
 
         // Step 1: Extract information (no strict schema)
-        console.log(`Step 1: Extracting nutritional information...`);
+        console.log(`Step 1: Extracting nutritional information...${foodName ? ` (Food name: ${foodName})` : ''}`);
         let extractedInfo: string;
         try {
-          extractedInfo = await extractNutritionalInfo(model, imageUrl);
+          extractedInfo = await extractNutritionalInfo(model, imageUrl, foodName);
           console.log(`Step 1: Successfully extracted information (length: ${extractedInfo.length} chars)`);
         } catch (extractError: any) {
           console.error(`Model ${model} - Extraction failed:`, extractError.message);
