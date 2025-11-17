@@ -78,8 +78,8 @@ export const analyzeImageWithVenice = async (image: ImagePart): Promise<Nutritio
             },
           },
           temperature: 0.3,
-          max_tokens: 8000, // Increased to prevent truncation
-          max_completion_tokens: 8000,
+          max_tokens: 20000, // Increased to prevent truncation
+          max_completion_tokens: 20000,
         });
 
         const response = await Promise.race([apiCall, timeoutPromise]) as any;
