@@ -110,6 +110,15 @@ export const analyzeImageWithVenice = async (image: ImagePart): Promise<Nutritio
       } catch (error: any) {
         const statusCode = error.status || error.response?.status;
         const errorMessage = error.message || '';
+        const errorDetails = error.response?.data || error.error || {};
+        
+        // Log full error details for debugging
+        console.error(`Model ${model} - Full error details:`, {
+          statusCode,
+          message: errorMessage,
+          error: errorDetails,
+          response: error.response?.data,
+        });
         
         // Handle rate limiting (429)
         if (statusCode === 429) {
@@ -140,15 +149,25 @@ export const analyzeImageWithVenice = async (image: ImagePart): Promise<Nutritio
           }
         }
         
+        // Handle 404 (model not found) - try next model immediately
+        if (statusCode === 404) {
+          console.error(`Model ${model} - Not found (404). Trying next model...`);
+          break; // Try next model
+        }
+        
+        // Handle 400 (bad request) - likely model doesn't support the feature
+        if (statusCode === 400) {
+          console.error(`Model ${model} - Bad request (400):`, errorDetails);
+          break; // Try next model
+        }
+        
         // For other errors, log and try next model
         console.error(`Model ${model} - Error calling Venice API:`, errorMessage);
         
         // If this is the last model and last retry, throw the error
         if (i === models.length - 1 && retries >= maxRetries) {
-          if (error.response?.data?.error) {
-            throw new Error(`Venice API error: ${error.response.data.error.message || error.response.data.error}`);
-          }
-          throw new Error(`Failed to get a valid response from the AI nutritionist: ${errorMessage}`);
+          const detailedError = errorDetails?.error?.message || errorDetails?.message || errorMessage;
+          throw new Error(`Venice API error: ${detailedError}`);
         }
         
         // Otherwise, try next model
@@ -158,6 +177,6 @@ export const analyzeImageWithVenice = async (image: ImagePart): Promise<Nutritio
   }
   
   // If we get here, all models failed
-  throw new Error('All vision models failed to analyze the image. Please wait 30 seconds and try again.');
+  throw new Error('All vision models failed to analyze the image. Please check the backend logs for details and wait 30 seconds before trying again.');
 };
 
