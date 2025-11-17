@@ -1,6 +1,24 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-brand-primary: #10B981;
+  --color-brand-secondary: #059669;
+  --color-brand-light: #D1FAE5;
+  --color-brand-dark: #047857;
+  
+  @keyframes fadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+  
+  @keyframes slideInUp {
+    0% { transform: translateY(20px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+  
+  --animate-fade-in: fadeIn 0.5s ease-in-out;
+  --animate-slide-in-up: slideInUp 0.5s ease-in-out;
+}
 
 body {
   font-family: 'Inter', sans-serif;
