@@ -44,7 +44,7 @@ app.get('/favicon.ico', (req, res) => {
 });
 
 // Start server immediately, connect to MongoDB in background
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
   // Connect to MongoDB (non-blocking)
   connectDB().catch((error) => {
