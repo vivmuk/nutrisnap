@@ -13,7 +13,7 @@ if (!process.env.VENICE_API_KEY) {
 const client = new OpenAI({
   apiKey: process.env.VENICE_API_KEY,
   baseURL: 'https://api.venice.ai/api/v1',
-  timeout: 120000, // 2 minutes timeout
+  timeout: 180000, // 3 minutes timeout (increased for formatting step)
   maxRetries: 0, // We handle retries ourselves
 });
 
@@ -106,7 +106,7 @@ REQUIREMENTS:
 Return ONLY valid JSON matching the schema.`;
 
   const timeoutPromise = new Promise((_, reject) => {
-    setTimeout(() => reject(new Error('Formatting timeout after 120 seconds')), 120000);
+    setTimeout(() => reject(new Error('Formatting timeout after 180 seconds')), 180000); // Increased to 3 minutes
   });
 
   const apiCall = client.chat.completions.create({
@@ -114,7 +114,7 @@ Return ONLY valid JSON matching the schema.`;
     messages: [
       {
         role: 'system',
-        content: 'You are a JSON formatting assistant. Format nutritional data into the exact schema provided.',
+        content: 'You are a JSON formatting assistant. Format nutritional data into the exact schema provided. Ensure the JSON is complete and valid.',
       },
       {
         role: 'user',
@@ -130,24 +130,31 @@ Return ONLY valid JSON matching the schema.`;
       },
     },
     temperature: 0.1, // Lower temperature for more consistent formatting
-    max_tokens: 8000,
-    max_completion_tokens: 8000,
+    max_tokens: 16000, // Increased from 8000 to prevent truncation
+    max_completion_tokens: 16000,
   });
 
   const response = await Promise.race([apiCall, timeoutPromise]) as any;
 
   const finishReason = response.choices[0]?.finish_reason;
   if (finishReason === 'length') {
-    console.warn(`Model ${model} - Formatting response was truncated. Consider increasing max_tokens.`);
+    console.warn(`Model ${model} - Formatting response was truncated. Consider increasing max_tokens further.`);
   }
 
   const content = response.choices[0]?.message?.content;
   
   if (!content) {
+    console.error(`Model ${model} - No content in formatting response. Full response:`, JSON.stringify(response, null, 2));
     throw new Error('No content returned from formatting step');
   }
 
   const jsonText = content.trim();
+  
+  // Check if response might be truncated
+  if (!jsonText.endsWith('}')) {
+    console.warn(`Model ${model} - Formatting response may be truncated. Full length: ${jsonText.length}`);
+    console.warn(`Model ${model} - Last 500 chars:`, jsonText.substring(Math.max(0, jsonText.length - 500)));
+  }
   
   try {
     const data = JSON.parse(jsonText);
@@ -157,6 +164,33 @@ Return ONLY valid JSON matching the schema.`;
     console.error(`Model ${model} - Response length: ${jsonText.length}`);
     console.error(`Model ${model} - First 500 chars:`, jsonText.substring(0, 500));
     console.error(`Model ${model} - Last 500 chars:`, jsonText.substring(Math.max(0, jsonText.length - 500)));
+    
+    // Try to fix truncated JSON
+    if (!jsonText.endsWith('}')) {
+      console.warn(`Model ${model} - Attempting to fix truncated JSON...`);
+      let fixedJson = jsonText.trim();
+      
+      // Count open/close braces
+      const openBraces = (fixedJson.match(/\{/g) || []).length;
+      const closeBraces = (fixedJson.match(/\}/g) || []).length;
+      const missingBraces = openBraces - closeBraces;
+      
+      if (missingBraces > 0) {
+        // Remove trailing comma if present
+        fixedJson = fixedJson.replace(/,\s*$/, '');
+        // Add missing closing braces
+        fixedJson += '}'.repeat(missingBraces);
+        
+        try {
+          const fixedData = JSON.parse(fixedJson);
+          console.log(`Model ${model} - Successfully fixed and parsed truncated JSON`);
+          return fixedData as NutritionalReport;
+        } catch (fixError: any) {
+          console.error(`Model ${model} - Failed to fix truncated JSON:`, fixError.message);
+        }
+      }
+    }
+    
     throw new Error(`Failed to parse formatted JSON: ${parseError.message}`);
   }
 };
