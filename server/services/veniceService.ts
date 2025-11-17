@@ -26,9 +26,8 @@ interface ImagePart {
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const analyzeImageWithVenice = async (image: ImagePart): Promise<NutritionalReport> => {
-  // Try primary model first, then fallback
-  // Using confirmed vision models from Venice API
-  const models = ['mistral-31-24b', 'qwen-2.5-vl'];
+  // Using mistral-31-24b vision model
+  const models = ['mistral-31-24b'];
   
   for (let i = 0; i < models.length; i++) {
     const model = models[i];
@@ -79,6 +78,7 @@ export const analyzeImageWithVenice = async (image: ImagePart): Promise<Nutritio
             },
           },
           temperature: 0.3,
+          max_tokens: 4000,
           max_completion_tokens: 4000,
         });
 
@@ -98,12 +98,57 @@ export const analyzeImageWithVenice = async (image: ImagePart): Promise<Nutritio
           break; // Try next model
         }
 
+        // Check if response might be truncated
+        if (!jsonText.endsWith('}')) {
+          console.warn(`Model ${model} - Response may be truncated. Full length: ${jsonText.length}`);
+          console.warn(`Model ${model} - Last 500 chars:`, jsonText.substring(Math.max(0, jsonText.length - 500)));
+        }
+
         try {
-          const data = JSON.parse(jsonText);
+          // Try to parse the JSON
+          let data: any;
+          try {
+            data = JSON.parse(jsonText);
+          } catch (parseError: any) {
+            // If parsing fails, try to fix common issues
+            console.warn(`Model ${model} - Initial parse failed, attempting to fix JSON...`);
+            
+            // Try to complete truncated JSON
+            let fixedJson = jsonText;
+            if (!fixedJson.endsWith('}')) {
+              // Count open braces and close them
+              const openBraces = (fixedJson.match(/\{/g) || []).length;
+              const closeBraces = (fixedJson.match(/\}/g) || []).length;
+              const missingBraces = openBraces - closeBraces;
+              
+              if (missingBraces > 0) {
+                // Try to intelligently close the JSON
+                fixedJson = fixedJson.trim();
+                // Remove trailing comma if present
+                fixedJson = fixedJson.replace(/,\s*$/, '');
+                // Add missing closing braces
+                fixedJson += '}'.repeat(missingBraces);
+                console.log(`Model ${model} - Attempted to fix JSON by adding ${missingBraces} closing braces`);
+              }
+            }
+            
+            try {
+              data = JSON.parse(fixedJson);
+              console.log(`Model ${model} - Successfully parsed after fixing JSON`);
+            } catch (secondParseError: any) {
+              console.error(`Model ${model} - Failed to parse even after fixing. Original error:`, parseError.message);
+              console.error(`Model ${model} - Fixed JSON (first 500 chars):`, fixedJson.substring(0, 500));
+              throw parseError; // Throw original error
+            }
+          }
+          
           console.log(`Successfully analyzed image with model: ${model}`);
           return data as NutritionalReport;
         } catch (parseError: any) {
-          console.error(`Model ${model} - Failed to parse Venice API response:`, jsonText.substring(0, 200));
+          console.error(`Model ${model} - Failed to parse Venice API response`);
+          console.error(`Model ${model} - Response length: ${jsonText.length}`);
+          console.error(`Model ${model} - First 500 chars:`, jsonText.substring(0, 500));
+          console.error(`Model ${model} - Last 500 chars:`, jsonText.substring(Math.max(0, jsonText.length - 500)));
           console.error('Parse error:', parseError);
           break; // Try next model
         }
