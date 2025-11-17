@@ -78,11 +78,17 @@ export const analyzeImageWithVenice = async (image: ImagePart): Promise<Nutritio
             },
           },
           temperature: 0.3,
-          max_tokens: 4000,
-          max_completion_tokens: 4000,
+          max_tokens: 8000, // Increased to prevent truncation
+          max_completion_tokens: 8000,
         });
 
         const response = await Promise.race([apiCall, timeoutPromise]) as any;
+
+        // Check if response was truncated
+        const finishReason = response.choices[0]?.finish_reason;
+        if (finishReason === 'length') {
+          console.warn(`Model ${model} - Response was truncated due to token limit. Consider increasing max_tokens.`);
+        }
 
         const content = response.choices[0]?.message?.content;
         
