@@ -25,6 +25,142 @@ interface ImagePart {
 // Helper function for exponential backoff
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Step 1: Extract information from image (no strict schema)
+const extractNutritionalInfo = async (model: string, imageUrl: string): Promise<string> => {
+  const extractionPrompt = `As an expert nutritionist, analyze this food image and extract ALL nutritional information in a detailed, structured format. 
+
+Provide a comprehensive analysis including:
+- Dish name and description
+- All visible foods and ingredients
+- Estimated portion sizes and weights
+- Complete macronutrient breakdown (protein, carbs with fiber/sugars, fats with saturated/unsaturated)
+- Micronutrients (vitamins and minerals)
+- Visual observations
+- Portion estimation methodology
+- Confidence assessment
+- Allergens and cautions
+
+Format your response as detailed text or flexible JSON. Focus on completeness and accuracy - we will format it properly in the next step.`;
+
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('Extraction timeout after 120 seconds')), 120000);
+  });
+
+  const apiCall = client.chat.completions.create({
+    model: model,
+    messages: [
+      {
+        role: 'system',
+        content: SYSTEM_PROMPT,
+      },
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: extractionPrompt,
+          },
+          {
+            type: 'image_url',
+            image_url: {
+              url: imageUrl,
+            },
+          },
+        ],
+      },
+    ],
+    // No strict schema - just get the information
+    temperature: 0.3,
+    max_tokens: 4000,
+    max_completion_tokens: 4000,
+  });
+
+  const response = await Promise.race([apiCall, timeoutPromise]) as any;
+  const content = response.choices[0]?.message?.content;
+  
+  if (!content) {
+    throw new Error('No content returned from extraction step');
+  }
+
+  return content;
+};
+
+// Step 2: Format extracted information according to strict schema
+const formatToSchema = async (model: string, extractedInfo: string): Promise<NutritionalReport> => {
+  const formattingPrompt = `You are a nutritionist assistant. Format the following nutritional information into the exact JSON schema required.
+
+EXTRACTED INFORMATION:
+${extractedInfo}
+
+REQUIREMENTS:
+- ALL numeric values MUST be whole integers (no decimals)
+- Follow the exact schema structure
+- Ensure all required fields are present
+- Break down each food component in items[] with individual calories
+- Include professional nutritional insights in notes[]
+- Provide detailed visual observations in analysis.visualObservations
+- Explain portion estimation methodology in analysis.portionEstimate
+- Detail confidence reasoning in analysis.confidenceNarrative
+- List allergens and cautions in analysis.cautions
+
+Return ONLY valid JSON matching the schema.`;
+
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('Formatting timeout after 120 seconds')), 120000);
+  });
+
+  const apiCall = client.chat.completions.create({
+    model: model,
+    messages: [
+      {
+        role: 'system',
+        content: 'You are a JSON formatting assistant. Format nutritional data into the exact schema provided.',
+      },
+      {
+        role: 'user',
+        content: formattingPrompt,
+      },
+    ],
+    response_format: {
+      type: 'json_schema',
+      json_schema: {
+        name: 'nutritional_report',
+        strict: true,
+        schema: RESPONSE_SCHEMA,
+      },
+    },
+    temperature: 0.1, // Lower temperature for more consistent formatting
+    max_tokens: 8000,
+    max_completion_tokens: 8000,
+  });
+
+  const response = await Promise.race([apiCall, timeoutPromise]) as any;
+
+  const finishReason = response.choices[0]?.finish_reason;
+  if (finishReason === 'length') {
+    console.warn(`Model ${model} - Formatting response was truncated. Consider increasing max_tokens.`);
+  }
+
+  const content = response.choices[0]?.message?.content;
+  
+  if (!content) {
+    throw new Error('No content returned from formatting step');
+  }
+
+  const jsonText = content.trim();
+  
+  try {
+    const data = JSON.parse(jsonText);
+    return data as NutritionalReport;
+  } catch (parseError: any) {
+    console.error(`Model ${model} - Failed to parse formatted JSON`);
+    console.error(`Model ${model} - Response length: ${jsonText.length}`);
+    console.error(`Model ${model} - First 500 chars:`, jsonText.substring(0, 500));
+    console.error(`Model ${model} - Last 500 chars:`, jsonText.substring(Math.max(0, jsonText.length - 500)));
+    throw new Error(`Failed to parse formatted JSON: ${parseError.message}`);
+  }
+};
+
 export const analyzeImageWithVenice = async (image: ImagePart): Promise<NutritionalReport> => {
   // Using mistral-31-24b vision model
   const models = ['mistral-31-24b'];
@@ -41,122 +177,26 @@ export const analyzeImageWithVenice = async (image: ImagePart): Promise<Nutritio
         // Convert base64 to data URL format for Venice API
         const imageUrl = `data:${image.mimeType};base64,${image.data}`;
 
-        // Create a timeout promise
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Request timeout after 120 seconds')), 120000);
-        });
-
-        const apiCall = client.chat.completions.create({
-          model: model,
-          messages: [
-            {
-              role: 'system',
-              content: SYSTEM_PROMPT,
-            },
-            {
-              role: 'user',
-              content: [
-                {
-                  type: 'text',
-                  text: USER_PROMPT,
-                },
-                {
-                  type: 'image_url',
-                  image_url: {
-                    url: imageUrl,
-                  },
-                },
-              ],
-            },
-          ],
-          response_format: {
-            type: 'json_schema',
-            json_schema: {
-              name: 'nutritional_report',
-              strict: true,
-              schema: RESPONSE_SCHEMA,
-            },
-          },
-          temperature: 0.3,
-          max_tokens: 20000, // Increased to prevent truncation
-          max_completion_tokens: 20000,
-        });
-
-        const response = await Promise.race([apiCall, timeoutPromise]) as any;
-
-        // Check if response was truncated
-        const finishReason = response.choices[0]?.finish_reason;
-        if (finishReason === 'length') {
-          console.warn(`Model ${model} - Response was truncated due to token limit. Consider increasing max_tokens.`);
-        }
-
-        const content = response.choices[0]?.message?.content;
-        
-        if (!content) {
-          console.error(`Model ${model} - Venice API response:`, JSON.stringify(response, null, 2));
-          break; // Try next model
-        }
-
-        const jsonText = content.trim();
-        
-        if (!jsonText) {
-          console.error(`Model ${model} - Empty content from Venice API`);
-          break; // Try next model
-        }
-
-        // Check if response might be truncated
-        if (!jsonText.endsWith('}')) {
-          console.warn(`Model ${model} - Response may be truncated. Full length: ${jsonText.length}`);
-          console.warn(`Model ${model} - Last 500 chars:`, jsonText.substring(Math.max(0, jsonText.length - 500)));
-        }
-
+        // Step 1: Extract information (no strict schema)
+        console.log(`Step 1: Extracting nutritional information...`);
+        let extractedInfo: string;
         try {
-          // Try to parse the JSON
-          let data: any;
-          try {
-            data = JSON.parse(jsonText);
-          } catch (parseError: any) {
-            // If parsing fails, try to fix common issues
-            console.warn(`Model ${model} - Initial parse failed, attempting to fix JSON...`);
-            
-            // Try to complete truncated JSON
-            let fixedJson = jsonText;
-            if (!fixedJson.endsWith('}')) {
-              // Count open braces and close them
-              const openBraces = (fixedJson.match(/\{/g) || []).length;
-              const closeBraces = (fixedJson.match(/\}/g) || []).length;
-              const missingBraces = openBraces - closeBraces;
-              
-              if (missingBraces > 0) {
-                // Try to intelligently close the JSON
-                fixedJson = fixedJson.trim();
-                // Remove trailing comma if present
-                fixedJson = fixedJson.replace(/,\s*$/, '');
-                // Add missing closing braces
-                fixedJson += '}'.repeat(missingBraces);
-                console.log(`Model ${model} - Attempted to fix JSON by adding ${missingBraces} closing braces`);
-              }
-            }
-            
-            try {
-              data = JSON.parse(fixedJson);
-              console.log(`Model ${model} - Successfully parsed after fixing JSON`);
-            } catch (secondParseError: any) {
-              console.error(`Model ${model} - Failed to parse even after fixing. Original error:`, parseError.message);
-              console.error(`Model ${model} - Fixed JSON (first 500 chars):`, fixedJson.substring(0, 500));
-              throw parseError; // Throw original error
-            }
-          }
-          
-          console.log(`Successfully analyzed image with model: ${model}`);
-          return data as NutritionalReport;
-        } catch (parseError: any) {
-          console.error(`Model ${model} - Failed to parse Venice API response`);
-          console.error(`Model ${model} - Response length: ${jsonText.length}`);
-          console.error(`Model ${model} - First 500 chars:`, jsonText.substring(0, 500));
-          console.error(`Model ${model} - Last 500 chars:`, jsonText.substring(Math.max(0, jsonText.length - 500)));
-          console.error('Parse error:', parseError);
-          break; // Try next model
+          extractedInfo = await extractNutritionalInfo(model, imageUrl);
+          console.log(`Step 1: Successfully extracted information (length: ${extractedInfo.length} chars)`);
+        } catch (extractError: any) {
+          console.error(`Model ${model} - Extraction failed:`, extractError.message);
+          throw extractError;
+        }
+
+        // Step 2: Format to schema
+        console.log(`Step 2: Formatting information to schema...`);
+        try {
+          const formattedData = await formatToSchema(model, extractedInfo);
+          console.log(`Successfully analyzed and formatted image with model: ${model}`);
+          return formattedData;
+        } catch (formatError: any) {
+          console.error(`Model ${model} - Formatting failed:`, formatError.message);
+          throw formatError;
         }
       } catch (error: any) {
         const statusCode = error.status || error.response?.status;
