@@ -4,10 +4,18 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/nutris
 
 export const connectDB = async (): Promise<void> => {
   try {
-    await mongoose.connect(MONGODB_URI);
+    if (!MONGODB_URI || MONGODB_URI === 'mongodb://localhost:27017/nutrisnap') {
+      console.warn('MONGODB_URI not set or using default. Database operations will fail.');
+      return;
+    }
+    
+    await mongoose.connect(MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+    });
     console.log('MongoDB connected successfully');
-  } catch (error) {
-    console.error('MongoDB connection error:', error);
+  } catch (error: any) {
+    console.error('MongoDB connection error:', error.message || error);
+    // Don't throw - let server continue running
     throw error;
   }
 };

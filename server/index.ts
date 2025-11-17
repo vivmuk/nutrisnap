@@ -24,13 +24,43 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'NutriSnap API is running' });
 });
 
-// Connect to MongoDB and start server
-connectDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+// Root route
+app.get('/', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    message: 'NutriSnap API',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      analyze: '/api/analyze',
+      foodLogs: '/api/food-logs'
+    }
   });
-}).catch((error) => {
-  console.error('Failed to connect to MongoDB:', error);
-  process.exit(1);
+});
+
+// Handle favicon requests
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).end();
+});
+
+// Start server immediately, connect to MongoDB in background
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  // Connect to MongoDB (non-blocking)
+  connectDB().catch((error) => {
+    console.error('Failed to connect to MongoDB:', error);
+    console.error('Server will continue running but database operations will fail');
+  });
+});
+
+// Handle graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  console.log('SIGINT received, shutting down gracefully');
+  process.exit(0);
 });
 
