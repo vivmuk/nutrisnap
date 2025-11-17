@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { analyzeImageWithVenice } from '../services/veniceService';
+import { analyzeImageWithVenice } from '../services/veniceService.js';
 
 const router = Router();
 

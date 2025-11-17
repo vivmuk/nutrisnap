@@ -1,9 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { analyzeImage } from './routes/analyze';
-import { foodLogsRouter } from './routes/foodLogs';
-import { connectDB } from './config/database';
+import { analyzeImage } from './routes/analyze.js';
+import { foodLogsRouter } from './routes/foodLogs.js';
+import { connectDB } from './config/database.js';
 
 dotenv.config();
 

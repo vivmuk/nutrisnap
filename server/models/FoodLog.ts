@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import { NutritionalReport } from '../types';
+import { NutritionalReport } from '../types.js';
 
 export interface IFoodLog extends Document {
   userId?: string; // Optional for future multi-user support
