@@ -85,6 +85,70 @@ Format your response as detailed text or flexible JSON. Focus on completeness an
   return content;
 };
 
+// Transform zai-org-glm-4.6 response to our expected schema format
+const transformResponseToSchema = (response: any): NutritionalReport => {
+  // Handle snake_case to camelCase conversion and structure transformation
+  const transformed: NutritionalReport = {
+    dishName: response.dish_name || response.dishName || 'Unknown Dish',
+    totalCalories: response.total_calories || response.totalCalories || response.calories || 0,
+    macroNutrients: {
+      protein: response.total_nutrition?.protein_g || response.macroNutrients?.protein || response.protein_g || 0,
+      carbohydrates: {
+        total: response.total_nutrition?.carbs_g || response.macroNutrients?.carbohydrates?.total || response.carbs_g || 0,
+        fiber: response.total_nutrition?.fiber_g || response.macroNutrients?.carbohydrates?.fiber || response.fiber_g || 0,
+        sugars: response.total_nutrition?.sugar_g || response.macroNutrients?.carbohydrates?.sugars || response.sugar_g || 0,
+      },
+      fat: {
+        total: response.total_nutrition?.fat_g || response.macroNutrients?.fat?.total || response.fat_g || 0,
+        saturated: response.macroNutrients?.fat?.saturated || 0,
+        unsaturated: response.macroNutrients?.fat?.unsaturated || 0,
+      },
+    },
+    microNutrients: {
+      vitamins: typeof response.microNutrients?.vitamins === 'string' 
+        ? response.microNutrients.vitamins 
+        : Array.isArray(response.microNutrients?.vitamins)
+        ? response.microNutrients.vitamins.join(', ')
+        : response.vitamins || 'Not specified',
+      minerals: typeof response.microNutrients?.minerals === 'string'
+        ? response.microNutrients.minerals
+        : Array.isArray(response.microNutrients?.minerals)
+        ? response.microNutrients.minerals.join(', ')
+        : response.minerals || 'Not specified',
+    },
+    items: (response.items || []).map((item: any) => ({
+      name: item.name || 'Unknown Item',
+      calories: item.calories || 0,
+      weightGrams: item.weight_g || item.weightGrams || 0,
+      macronutrients: {
+        protein: item.protein_g || item.macronutrients?.protein || 0,
+        carbohydrates: {
+          total: item.carbs_g || item.macronutrients?.carbohydrates?.total || 0,
+          fiber: item.fiber_g || item.macronutrients?.carbohydrates?.fiber || 0,
+          sugars: item.sugar_g || item.macronutrients?.carbohydrates?.sugars || 0,
+        },
+        fat: {
+          total: item.fat_g || item.macronutrients?.fat?.total || 0,
+          saturated: item.macronutrients?.fat?.saturated || 0,
+          unsaturated: item.macronutrients?.fat?.unsaturated || 0,
+        },
+      },
+    })),
+    notes: Array.isArray(response.notes) ? response.notes : [],
+    analysis: {
+      visualObservations: Array.isArray(response.analysis?.visualObservations)
+        ? response.analysis.visualObservations.join('. ')
+        : response.analysis?.visualObservations || response.visualObservations || 'No visual observations',
+      portionEstimate: response.analysis?.portionEstimate || response.portionEstimate || 'Portion size estimated',
+      confidence: response.analysis?.confidence || response.confidence || 75,
+      confidenceNarrative: response.analysis?.confidenceNarrative || response.confidenceNarrative || 'Confidence based on visual analysis',
+      cautions: Array.isArray(response.analysis?.cautions) ? response.analysis.cautions : [],
+    },
+  };
+
+  return transformed;
+};
+
 // Step 2: Format extracted information according to strict schema
 // Use zai-org-glm-4.6 for formatting (better structured output support)
 const formatToSchema = async (extractedInfo: string): Promise<NutritionalReport> => {
@@ -160,7 +224,10 @@ Return ONLY valid JSON matching the schema.`;
   
   try {
     const data = JSON.parse(jsonText);
-    return data as NutritionalReport;
+    // Transform the response to match our expected schema
+    const transformed = transformResponseToSchema(data);
+    console.log(`Model ${formattingModel} - Successfully transformed response to schema`);
+    return transformed;
   } catch (parseError: any) {
     console.error(`Model ${formattingModel} - Failed to parse formatted JSON`);
     console.error(`Model ${formattingModel} - Response length: ${jsonText.length}`);
@@ -185,8 +252,10 @@ Return ONLY valid JSON matching the schema.`;
         
         try {
           const fixedData = JSON.parse(fixedJson);
-          console.log(`Model ${formattingModel} - Successfully fixed and parsed truncated JSON`);
-          return fixedData as NutritionalReport;
+          // Transform the fixed response to match our expected schema
+          const transformed = transformResponseToSchema(fixedData);
+          console.log(`Model ${formattingModel} - Successfully fixed, parsed, and transformed truncated JSON`);
+          return transformed;
         } catch (fixError: any) {
           console.error(`Model ${formattingModel} - Failed to fix truncated JSON:`, fixError.message);
         }
