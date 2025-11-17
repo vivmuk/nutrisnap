@@ -63,13 +63,25 @@ export const analyzeImageWithVenice = async (image: ImagePart): Promise<Nutritio
     const content = response.choices[0]?.message?.content;
     
     if (!content) {
+      console.error('Venice API response:', JSON.stringify(response, null, 2));
       throw new Error('No response content from Venice API');
     }
 
     const jsonText = content.trim();
-    const data = JSON.parse(jsonText);
     
-    return data as NutritionalReport;
+    if (!jsonText) {
+      console.error('Empty content from Venice API');
+      throw new Error('Empty response from Venice API');
+    }
+
+    try {
+      const data = JSON.parse(jsonText);
+      return data as NutritionalReport;
+    } catch (parseError: any) {
+      console.error('Failed to parse Venice API response:', jsonText);
+      console.error('Parse error:', parseError);
+      throw new Error(`Invalid JSON response from Venice API: ${parseError.message}`);
+    }
   } catch (error: any) {
     console.error("Error calling Venice API:", error);
     

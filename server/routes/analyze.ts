@@ -20,18 +20,26 @@ router.post('/', async (req: Request, res: Response) => {
       });
     }
 
+    console.log('Received image analysis request');
     const result = await analyzeImageWithVenice({
       data: image.data,
       mimeType: image.mimeType,
     });
 
+    console.log('Image analysis successful');
     res.json(result);
   } catch (error: any) {
     console.error('Error analyzing image:', error);
-    res.status(500).json({ 
+    console.error('Error stack:', error.stack);
+    
+    // Ensure we always send valid JSON
+    const errorResponse = {
       error: 'Failed to analyze image',
-      message: error.message || 'An unknown error occurred'
-    });
+      message: error.message || 'An unknown error occurred',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    };
+    
+    res.status(500).json(errorResponse);
   }
 });
 
