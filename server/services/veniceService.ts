@@ -278,8 +278,8 @@ Return ONLY valid JSON matching the schema.`;
 };
 
 export const analyzeImageWithVenice = async (image: ImagePart, foodName?: string): Promise<NutritionalReport> => {
-  // Using google-gemma-3-27b-it as primary, mistral-31-24b as fallback
-  const models = ['google-gemma-3-27b-it', 'mistral-31-24b'];
+  // Using mistral-31-24b as primary for image analysis
+  const models = ['mistral-31-24b'];
   
   for (let i = 0; i < models.length; i++) {
     const model = models[i];
