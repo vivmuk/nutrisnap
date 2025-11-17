@@ -27,6 +27,7 @@ process.on('SIGINT', () => {
 
 try {
   const server = await preview({
+    configFile: resolve(__dirname, 'vite.config.ts'),
     preview: {
       port,
       host: '0.0.0.0',
