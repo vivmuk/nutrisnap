@@ -87,8 +87,15 @@ const Dashboard: React.FC<DashboardProps> = ({ foodLog, onSwitchToAnalyzer }) =>
               </div>
               <div className="space-y-3 max-h-80 overflow-y-auto pr-2">
                   {logsForCurrentDate.length > 0 ? logsForCurrentDate.map(log => (
-                      <div key={log.id} className="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg">
-                          <div>
+                      <div key={log.id} className="flex items-center gap-3 p-3 bg-gray-700/50 rounded-lg">
+                          {log.image && (
+                            <img 
+                              src={log.image} 
+                              alt={log.dishName}
+                              className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
+                            />
+                          )}
+                          <div className="flex-1 min-w-0">
                               <p className="font-medium text-gray-200">{log.dishName}</p>
                               <p className="text-sm text-gray-400">{log.totalCalories} kcal &bull; {log.macroNutrients.protein}P/{log.macroNutrients.carbohydrates.total}C/{log.macroNutrients.fat.total}F</p>
                           </div>
@@ -98,7 +105,7 @@ const Dashboard: React.FC<DashboardProps> = ({ foodLog, onSwitchToAnalyzer }) =>
                             } catch (error) {
                               console.error('Failed to delete food log:', error);
                             }
-                          }} className="p-2 text-gray-500 hover:text-red-500 transition-colors">
+                          }} className="p-2 text-gray-500 hover:text-red-500 transition-colors flex-shrink-0">
                               <TrashIcon className="w-5 h-5"/>
                           </button>
                       </div>

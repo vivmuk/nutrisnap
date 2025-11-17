@@ -17,6 +17,7 @@ const App: React.FC = () => {
 
   const [report, setReport] = useState<NutritionalReport | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [currentImage, setCurrentImage] = useState<string | null>(null); // Store current image
   const foodLog = useFoodLog();
 
   const fileToBase64 = (file: File): Promise<string> => {
@@ -46,13 +47,20 @@ const App: React.FC = () => {
       const base64Data = await fileToBase64(file);
       const mimeType = file.type;
       
+      // Store the image for display
+      const imageDataUrl = `data:${mimeType};base64,${base64Data}`;
+      setCurrentImage(imageDataUrl);
+      
       const result = await analyzeImage({ data: base64Data, mimeType });
-      setReport(result);
+      // Add image to the report
+      const reportWithImage = { ...result, image: imageDataUrl };
+      setReport(reportWithImage);
       setAnalysisView('REPORT');
     } catch (err) {
       console.error(err);
       setError('Failed to analyze the image. The AI may be unable to process this specific image, or an API error occurred. Please try a different image.');
       setAnalysisView('ERROR');
+      setCurrentImage(null);
     }
   }, []);
   
@@ -81,6 +89,7 @@ const App: React.FC = () => {
   const handleResetAnalysis = () => {
     setReport(null);
     setError(null);
+    setCurrentImage(null);
     setAnalysisView('SELECT');
   };
   

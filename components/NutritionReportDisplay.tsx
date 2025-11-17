@@ -32,7 +32,7 @@ const CustomTooltip = ({ active, payload }: any) => {
 
 
 const NutritionReportDisplay: React.FC<NutritionReportDisplayProps> = ({ report, onAddToLog, onCancel }) => {
-  const { totalCalories, macroNutrients, dishName, items, notes, analysis } = report;
+  const { totalCalories, macroNutrients, dishName, items, notes, analysis, image } = report;
   
   const macroData = [
     { name: 'Protein', value: macroNutrients.protein },
@@ -48,6 +48,15 @@ const NutritionReportDisplay: React.FC<NutritionReportDisplayProps> = ({ report,
         <h2 className="text-3xl font-bold text-white">{dishName}</h2>
         <p className="text-7xl font-extrabold text-brand-primary mt-2">{totalCalories}</p>
         <p className="text-gray-400">Total Estimated Calories</p>
+        {image && (
+          <div className="mt-6 flex justify-center">
+            <img 
+              src={image} 
+              alt={dishName}
+              className="max-w-full h-auto max-h-64 rounded-lg shadow-lg border-2 border-gray-700"
+            />
+          </div>
+        )}
       </div>
       
       <div className="grid md:grid-cols-2 gap-6">

@@ -41,6 +41,7 @@ export interface NutritionalReport {
   items: FoodItem[];
   notes: string[];
   analysis: Analysis;
+  image?: string; // base64 encoded image (optional, for manual entries)
 }
 
 export interface LoggedFoodItem extends NutritionalReport {

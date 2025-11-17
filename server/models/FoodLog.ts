@@ -51,6 +51,7 @@ const NutritionalReportSchema = new Schema({
   items: { type: [FoodItemSchema], required: true },
   notes: { type: [String], required: true },
   analysis: { type: AnalysisSchema, required: true },
+  image: { type: String, required: false }, // base64 encoded image (optional)
 }, { _id: false });
 
 const FoodLogSchema = new Schema({
