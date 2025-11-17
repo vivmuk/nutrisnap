@@ -12,6 +12,11 @@ export default defineConfig(({ mode }) => {
       preview: {
         port: process.env.PORT ? parseInt(process.env.PORT) : 3000,
         host: '0.0.0.0',
+        allowedHosts: [
+          'gracious-creation-production.up.railway.app',
+          '.railway.app',
+          '.up.railway.app',
+        ],
       },
       plugins: [react()],
       define: {
