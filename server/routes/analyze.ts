@@ -26,7 +26,26 @@ router.post('/', async (req: Request, res: Response) => {
       mimeType: image.mimeType,
     });
 
+    // Validate the response structure before sending
+    if (!result || !result.macroNutrients || !result.macroNutrients.protein) {
+      console.error('Invalid response structure:', JSON.stringify(result, null, 2));
+      return res.status(500).json({
+        error: 'Invalid response from AI model',
+        message: 'The nutritional analysis response is missing required fields',
+        details: result
+      });
+    }
+
     console.log('Image analysis successful');
+    console.log('Response structure validated:', {
+      hasDishName: !!result.dishName,
+      hasTotalCalories: !!result.totalCalories,
+      hasMacroNutrients: !!result.macroNutrients,
+      hasProtein: !!result.macroNutrients?.protein,
+      hasItems: !!result.items,
+      itemsCount: result.items?.length || 0
+    });
+    
     res.json(result);
   } catch (error: any) {
     console.error('Error analyzing image:', error);

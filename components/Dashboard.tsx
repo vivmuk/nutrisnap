@@ -32,10 +32,10 @@ const Dashboard: React.FC<DashboardProps> = ({ foodLog, onSwitchToAnalyzer }) =>
 
     const dailyTotals = useMemo(() => {
         return logsForCurrentDate.reduce((acc, log) => {
-            acc.calories += log.totalCalories;
-            acc.protein += log.macroNutrients.protein;
-            acc.carbs += log.macroNutrients.carbohydrates.total;
-            acc.fat += log.macroNutrients.fat.total;
+            acc.calories += log.totalCalories || 0;
+            acc.protein += log.macroNutrients?.protein || 0;
+            acc.carbs += log.macroNutrients?.carbohydrates?.total || 0;
+            acc.fat += log.macroNutrients?.fat?.total || 0;
             return acc;
         }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
     }, [logsForCurrentDate]);
@@ -97,7 +97,7 @@ const Dashboard: React.FC<DashboardProps> = ({ foodLog, onSwitchToAnalyzer }) =>
                           )}
                           <div className="flex-1 min-w-0">
                               <p className="font-medium text-gray-200">{log.dishName}</p>
-                              <p className="text-sm text-gray-400">{log.totalCalories} kcal &bull; {log.macroNutrients.protein}P/{log.macroNutrients.carbohydrates.total}C/{log.macroNutrients.fat.total}F</p>
+                              <p className="text-sm text-gray-400">{log.totalCalories || 0} kcal &bull; {log.macroNutrients?.protein || 0}P/{log.macroNutrients?.carbohydrates?.total || 0}C/{log.macroNutrients?.fat?.total || 0}F</p>
                           </div>
                           <button onClick={async () => {
                             try {

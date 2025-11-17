@@ -32,12 +32,23 @@ const CustomTooltip = ({ active, payload }: any) => {
 
 
 const NutritionReportDisplay: React.FC<NutritionReportDisplayProps> = ({ report, onAddToLog, onCancel }) => {
+  // Defensive checks for missing data
+  if (!report || !report.macroNutrients) {
+    console.error('Invalid report structure:', report);
+    return (
+      <div className="bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-lg">
+        <strong className="font-bold">Error: </strong>
+        <span>Invalid nutritional report data received. Please try again.</span>
+      </div>
+    );
+  }
+
   const { totalCalories, macroNutrients, dishName, items, notes, analysis, image } = report;
   
   const macroData = [
-    { name: 'Protein', value: macroNutrients.protein },
-    { name: 'Carbs', value: macroNutrients.carbohydrates.total },
-    { name: 'Fat', value: macroNutrients.fat.total },
+    { name: 'Protein', value: macroNutrients?.protein || 0 },
+    { name: 'Carbs', value: macroNutrients?.carbohydrates?.total || 0 },
+    { name: 'Fat', value: macroNutrients?.fat?.total || 0 },
   ];
 
   const COLORS = ['#10B981', '#3B82F6', '#F59E0B'];

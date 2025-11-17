@@ -33,11 +33,11 @@ const MacroChart: React.FC<MacroChartProps> = ({ logs, currentDate, dataKey, uni
             
             let totalValue = 0;
             if (dataKey === 'protein') {
-                totalValue = dayLogs.reduce((sum, log) => sum + log.macroNutrients.protein, 0);
+                totalValue = dayLogs.reduce((sum, log) => sum + (log.macroNutrients?.protein || 0), 0);
             } else if (dataKey === 'carbs') {
-                totalValue = dayLogs.reduce((sum, log) => sum + log.macroNutrients.carbohydrates.total, 0);
+                totalValue = dayLogs.reduce((sum, log) => sum + (log.macroNutrients?.carbohydrates?.total || 0), 0);
             } else if (dataKey === 'fat') {
-                totalValue = dayLogs.reduce((sum, log) => sum + log.macroNutrients.fat.total, 0);
+                totalValue = dayLogs.reduce((sum, log) => sum + (log.macroNutrients?.fat?.total || 0), 0);
             }
             
             return {
