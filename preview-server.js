@@ -1,9 +1,18 @@
 import { preview } from 'vite';
 import { resolve } from 'path';
 import { fileURLToPath } from 'url';
+import { existsSync } from 'fs';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const port = parseInt(process.env.PORT || '8080', 10);
+const distDir = resolve(__dirname, 'dist');
+
+// Check if dist folder exists
+if (!existsSync(distDir)) {
+  console.error(`❌ Error: dist folder not found at ${distDir}`);
+  console.error('Please run "npm run build" first');
+  process.exit(1);
+}
 
 // Keep process alive
 process.on('SIGTERM', () => {
