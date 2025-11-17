@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 import dotenv from 'dotenv';
-import { NutritionalReport } from '../../types';
-import { SYSTEM_PROMPT, USER_PROMPT, RESPONSE_SCHEMA } from '../../constants';
+import { NutritionalReport } from '../types';
+import { SYSTEM_PROMPT, USER_PROMPT, RESPONSE_SCHEMA } from '../constants';
 
 // Load environment variables
 dotenv.config();

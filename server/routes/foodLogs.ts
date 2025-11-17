@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { FoodLog } from '../models/FoodLog';
-import { NutritionalReport } from '../../types';
+import { NutritionalReport } from '../types';
 import { startOfDay, endOfDay } from 'date-fns';
 
 const router = Router();
