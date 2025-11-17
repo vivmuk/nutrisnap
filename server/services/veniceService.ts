@@ -10,10 +10,6 @@ if (!process.env.VENICE_API_KEY) {
   throw new Error("VENICE_API_KEY environment variable not set");
 }
 
-if (!process.env.VENICE_API_KEY) {
-  throw new Error("VENICE_API_KEY environment variable not set");
-}
-
 const client = new OpenAI({
   apiKey: process.env.VENICE_API_KEY,
   baseURL: 'https://api.venice.ai/api/v1',
