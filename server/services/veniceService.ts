@@ -86,7 +86,9 @@ Format your response as detailed text or flexible JSON. Focus on completeness an
 };
 
 // Step 2: Format extracted information according to strict schema
-const formatToSchema = async (model: string, extractedInfo: string): Promise<NutritionalReport> => {
+// Use zai-org-glm-4.6 for formatting (better structured output support)
+const formatToSchema = async (extractedInfo: string): Promise<NutritionalReport> => {
+  const formattingModel = 'zai-org-glm-4.6'; // Dedicated model for JSON formatting
   const formattingPrompt = `You are a nutritionist assistant. Format the following nutritional information into the exact JSON schema required.
 
 EXTRACTED INFORMATION:
@@ -110,7 +112,7 @@ Return ONLY valid JSON matching the schema.`;
   });
 
   const apiCall = client.chat.completions.create({
-    model: model,
+    model: formattingModel,
     messages: [
       {
         role: 'system',
@@ -138,13 +140,13 @@ Return ONLY valid JSON matching the schema.`;
 
   const finishReason = response.choices[0]?.finish_reason;
   if (finishReason === 'length') {
-    console.warn(`Model ${model} - Formatting response was truncated. Consider increasing max_tokens further.`);
+    console.warn(`Model ${formattingModel} - Formatting response was truncated. Consider increasing max_tokens further.`);
   }
 
   const content = response.choices[0]?.message?.content;
   
   if (!content) {
-    console.error(`Model ${model} - No content in formatting response. Full response:`, JSON.stringify(response, null, 2));
+    console.error(`Model ${formattingModel} - No content in formatting response. Full response:`, JSON.stringify(response, null, 2));
     throw new Error('No content returned from formatting step');
   }
 
@@ -152,22 +154,22 @@ Return ONLY valid JSON matching the schema.`;
   
   // Check if response might be truncated
   if (!jsonText.endsWith('}')) {
-    console.warn(`Model ${model} - Formatting response may be truncated. Full length: ${jsonText.length}`);
-    console.warn(`Model ${model} - Last 500 chars:`, jsonText.substring(Math.max(0, jsonText.length - 500)));
+    console.warn(`Model ${formattingModel} - Formatting response may be truncated. Full length: ${jsonText.length}`);
+    console.warn(`Model ${formattingModel} - Last 500 chars:`, jsonText.substring(Math.max(0, jsonText.length - 500)));
   }
   
   try {
     const data = JSON.parse(jsonText);
     return data as NutritionalReport;
   } catch (parseError: any) {
-    console.error(`Model ${model} - Failed to parse formatted JSON`);
-    console.error(`Model ${model} - Response length: ${jsonText.length}`);
-    console.error(`Model ${model} - First 500 chars:`, jsonText.substring(0, 500));
-    console.error(`Model ${model} - Last 500 chars:`, jsonText.substring(Math.max(0, jsonText.length - 500)));
+    console.error(`Model ${formattingModel} - Failed to parse formatted JSON`);
+    console.error(`Model ${formattingModel} - Response length: ${jsonText.length}`);
+    console.error(`Model ${formattingModel} - First 500 chars:`, jsonText.substring(0, 500));
+    console.error(`Model ${formattingModel} - Last 500 chars:`, jsonText.substring(Math.max(0, jsonText.length - 500)));
     
     // Try to fix truncated JSON
     if (!jsonText.endsWith('}')) {
-      console.warn(`Model ${model} - Attempting to fix truncated JSON...`);
+      console.warn(`Model ${formattingModel} - Attempting to fix truncated JSON...`);
       let fixedJson = jsonText.trim();
       
       // Count open/close braces
@@ -183,10 +185,10 @@ Return ONLY valid JSON matching the schema.`;
         
         try {
           const fixedData = JSON.parse(fixedJson);
-          console.log(`Model ${model} - Successfully fixed and parsed truncated JSON`);
+          console.log(`Model ${formattingModel} - Successfully fixed and parsed truncated JSON`);
           return fixedData as NutritionalReport;
         } catch (fixError: any) {
-          console.error(`Model ${model} - Failed to fix truncated JSON:`, fixError.message);
+          console.error(`Model ${formattingModel} - Failed to fix truncated JSON:`, fixError.message);
         }
       }
     }
@@ -222,14 +224,14 @@ export const analyzeImageWithVenice = async (image: ImagePart): Promise<Nutritio
           throw extractError;
         }
 
-        // Step 2: Format to schema
+        // Step 2: Format to schema (using dedicated formatting model)
         console.log(`Step 2: Formatting information to schema...`);
         try {
-          const formattedData = await formatToSchema(model, extractedInfo);
-          console.log(`Successfully analyzed and formatted image with model: ${model}`);
+          const formattedData = await formatToSchema(extractedInfo);
+          console.log(`Successfully analyzed image with ${model} and formatted with zai-org-glm-4.6`);
           return formattedData;
         } catch (formatError: any) {
-          console.error(`Model ${model} - Formatting failed:`, formatError.message);
+          console.error(`Formatting failed:`, formatError.message);
           throw formatError;
         }
       } catch (error: any) {
