@@ -10,9 +10,14 @@ export default defineConfig(({ mode }) => {
         host: '0.0.0.0',
       },
       preview: {
-        port: process.env.PORT ? parseInt(process.env.PORT) : 3000,
+        port: process.env.PORT ? parseInt(process.env.PORT) : 8080,
         host: '0.0.0.0',
         allowedHosts: 'all', // Allow all hosts for Railway deployment
+        strictPort: false, // Don't fail if port is already in use
+      },
+      build: {
+        outDir: 'dist',
+        assetsDir: 'assets',
       },
       plugins: [react()],
       define: {
