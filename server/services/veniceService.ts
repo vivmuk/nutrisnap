@@ -13,6 +13,8 @@ if (!process.env.VENICE_API_KEY) {
 const client = new OpenAI({
   apiKey: process.env.VENICE_API_KEY,
   baseURL: 'https://api.venice.ai/api/v1',
+  timeout: 120000, // 2 minutes timeout
+  maxRetries: 0, // We handle retries ourselves
 });
 
 interface ImagePart {
@@ -40,7 +42,12 @@ export const analyzeImageWithVenice = async (image: ImagePart): Promise<Nutritio
         // Convert base64 to data URL format for Venice API
         const imageUrl = `data:${image.mimeType};base64,${image.data}`;
 
-        const response = await client.chat.completions.create({
+        // Create a timeout promise
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Request timeout after 120 seconds')), 120000);
+        });
+
+        const apiCall = client.chat.completions.create({
           model: model,
           messages: [
             {
@@ -74,6 +81,8 @@ export const analyzeImageWithVenice = async (image: ImagePart): Promise<Nutritio
           temperature: 0.3,
           max_completion_tokens: 4000,
         });
+
+        const response = await Promise.race([apiCall, timeoutPromise]) as any;
 
         const content = response.choices[0]?.message?.content;
         
