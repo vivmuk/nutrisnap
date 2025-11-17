@@ -1,0 +1,7 @@
+{
+  "name": "NutriSnap - AI Calorie Tracker",
+  "description": "An intelligent calorie and macronutrient tracker. Simply upload or take a photo of your meal, and our AI nutritionist will provide a detailed breakdown of its nutritional content.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
