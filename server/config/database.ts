@@ -16,7 +16,7 @@ export const connectDB = async (): Promise<void> => {
   } catch (error: any) {
     console.error('MongoDB connection error:', error.message || error);
     // Don't throw - let server continue running
-    throw error;
+    // The server will start but database operations will fail
   }
 };
 
