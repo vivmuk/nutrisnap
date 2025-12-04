@@ -32,7 +32,12 @@ const App: React.FC = () => {
     });
   };
 
-  const handleStartAnalysis = useCallback(async (file: File, foodName?: string) => {
+  const handleStartAnalysis = useCallback(async (
+    file: File, 
+    foodName?: string,
+    modelId?: string,
+    userCues?: string
+  ) => {
     if (!file) {
       setError('Please select an image first.');
       setAnalysisView('ERROR');
@@ -51,7 +56,12 @@ const App: React.FC = () => {
       const imageDataUrl = `data:${mimeType};base64,${base64Data}`;
       setCurrentImage(imageDataUrl);
       
-      const result = await analyzeImage({ data: base64Data, mimeType }, foodName);
+      const result = await analyzeImage(
+        { data: base64Data, mimeType }, 
+        foodName,
+        modelId,
+        userCues
+      );
       // Add image to the report
       const reportWithImage = { ...result, image: imageDataUrl };
       setReport(reportWithImage);

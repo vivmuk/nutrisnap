@@ -6,9 +6,36 @@ interface ImagePart {
   mimeType: string;
 }
 
+export interface VeniceModel {
+  id: string;
+  name: string;
+  description: string;
+  supportsVision: boolean;
+  traits?: string[];
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
-export const analyzeImage = async (image: ImagePart, foodName?: string): Promise<NutritionalReport> => {
+export const getAvailableModels = async (): Promise<VeniceModel[]> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/models`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch models');
+    }
+    const data = await response.json();
+    return data.models || [];
+  } catch (error) {
+    console.error('Error fetching models:', error);
+    return [];
+  }
+};
+
+export const analyzeImage = async (
+  image: ImagePart, 
+  foodName?: string,
+  modelId?: string,
+  userCues?: string
+): Promise<NutritionalReport> => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minutes timeout
 
@@ -18,7 +45,7 @@ export const analyzeImage = async (image: ImagePart, foodName?: string): Promise
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ image, foodName }),
+      body: JSON.stringify({ image, foodName, modelId, userCues }),
       signal: controller.signal,
     });
 

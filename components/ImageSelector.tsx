@@ -1,7 +1,8 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
+import { getAvailableModels, VeniceModel } from '../services/imageService';
 
 interface ImageSelectorProps {
-  onStartAnalysis: (file: File, foodName?: string) => void;
+  onStartAnalysis: (file: File, foodName?: string, modelId?: string, userCues?: string) => void;
   onManualAdd: () => void;
   onSwitchToDashboard: () => void;
 }
@@ -32,12 +33,33 @@ const ImageSelector: React.FC<ImageSelectorProps> = ({ onStartAnalysis, onManual
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const [foodName, setFoodName] = useState<string>('');
+  const [userCues, setUserCues] = useState<string>('');
+  const [selectedModel, setSelectedModel] = useState<string>('');
+  const [availableModels, setAvailableModels] = useState<VeniceModel[]>([]);
+  const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
+
+  useEffect(() => {
+    const loadModels = async () => {
+      const models = await getAvailableModels();
+      setAvailableModels(models);
+      if (models.length > 0) {
+        setSelectedModel(models[0].id);
+      }
+    };
+    loadModels();
+  }, []);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      onStartAnalysis(file, foodName.trim() || undefined);
-      setFoodName(''); // Reset after analysis starts
+      onStartAnalysis(
+        file, 
+        foodName.trim() || undefined,
+        selectedModel || undefined,
+        userCues.trim() || undefined
+      );
+      setFoodName('');
+      setUserCues('');
     }
   };
 
@@ -64,6 +86,71 @@ const ImageSelector: React.FC<ImageSelectorProps> = ({ onStartAnalysis, onManual
         />
         <p className="mt-1 text-xs text-gray-500">Help the AI identify regional or cultural dishes</p>
       </div>
+
+      {/* Advanced Options Toggle */}
+      <div className="w-full max-w-md">
+        <button
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          className="text-sm text-brand-primary hover:text-brand-secondary transition-colors flex items-center gap-2"
+        >
+          <svg 
+            className={`h-4 w-4 transition-transform ${showAdvanced ? 'rotate-90' : ''}`}
+            fill="none" 
+            viewBox="0 0 24 24" 
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+          Advanced Options
+        </button>
+      </div>
+
+      {/* Advanced Options Panel */}
+      {showAdvanced && (
+        <div className="w-full max-w-md space-y-4 animate-slide-in-up">
+          {/* Model Selection */}
+          <div>
+            <label htmlFor="modelSelect" className="block text-sm font-medium text-gray-300 mb-2">
+              AI Vision Model
+            </label>
+            <select
+              id="modelSelect"
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value)}
+              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+            >
+              {availableModels.map((model) => (
+                <option key={model.id} value={model.id}>
+                  {model.name}
+                </option>
+              ))}
+            </select>
+            {selectedModel && availableModels.find(m => m.id === selectedModel) && (
+              <p className="mt-1 text-xs text-gray-500">
+                {availableModels.find(m => m.id === selectedModel)?.description}
+              </p>
+            )}
+          </div>
+
+          {/* User Measurement Cues */}
+          <div>
+            <label htmlFor="userCues" className="block text-sm font-medium text-gray-300 mb-2">
+              Measurement Cues (Optional)
+            </label>
+            <textarea
+              id="userCues"
+              value={userCues}
+              onChange={(e) => setUserCues(e.target.value)}
+              placeholder="e.g., 'Large dinner plate (10 inches)', 'Portion size of my fist', 'Standard coffee mug'..."
+              rows={3}
+              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent resize-none"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Provide size references to improve portion accuracy
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-4 w-full justify-center max-w-md">
         <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
