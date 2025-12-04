@@ -9,11 +9,13 @@ interface AnalyzeRequest {
     mimeType: string;
   };
   foodName?: string; // Optional food name to guide analysis
+  modelId?: string; // Optional model selection
+  userCues?: string; // Optional measurement cues
 }
 
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { image, foodName }: AnalyzeRequest = req.body;
+    const { image, foodName, modelId, userCues }: AnalyzeRequest = req.body;
 
     if (!image || !image.data || !image.mimeType) {
       return res.status(400).json({ 
@@ -21,11 +23,16 @@ router.post('/', async (req: Request, res: Response) => {
       });
     }
 
-    console.log('Received image analysis request', foodName ? `with food name: ${foodName}` : '');
+    console.log('Received image analysis request', {
+      foodName: foodName || 'none',
+      modelId: modelId || 'default',
+      hasCues: !!userCues
+    });
+    
     const result = await analyzeImageWithVenice({
       data: image.data,
       mimeType: image.mimeType,
-    }, foodName);
+    }, foodName, modelId, userCues);
 
     // Validate the response structure before sending
     if (!result || !result.macroNutrients || typeof result.macroNutrients.protein !== 'number') {

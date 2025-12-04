@@ -26,21 +26,30 @@ interface ImagePart {
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Step 1: Extract information from image (no strict schema)
-const extractNutritionalInfo = async (model: string, imageUrl: string, foodName?: string): Promise<string> => {
+const extractNutritionalInfo = async (
+  model: string, 
+  imageUrl: string, 
+  foodName?: string,
+  userCues?: string
+): Promise<string> => {
   const foodNameContext = foodName 
     ? `\n\nIMPORTANT CONTEXT: The user has indicated this dish may be called "${foodName}". Please use this information to help identify regional or cultural variations, traditional preparation methods, and authentic ingredients. This is especially helpful for regional cuisines from different parts of the world. However, still verify what you see in the image and provide accurate nutritional information based on the actual visual content.`
     : '';
 
-  const extractionPrompt = `As an expert nutritionist, analyze this food image and extract ALL nutritional information in a detailed, structured format.${foodNameContext}
+  const userCuesContext = userCues
+    ? `\n\nUSER-PROVIDED MEASUREMENT CUES:\n${userCues}\n\nUse these cues as PRIMARY measurement anchors for portion estimation. These are ground truth references provided by the user.`
+    : '';
+
+  const extractionPrompt = `As an expert nutritionist, analyze this food image and extract ALL nutritional information in a detailed, structured format.${foodNameContext}${userCuesContext}
 
 Provide a comprehensive analysis including:
 - Dish name and description (use the provided context if helpful, but verify with the image)
 - All visible foods and ingredients
-- Estimated portion sizes and weights
+- Estimated portion sizes and weights (PRIORITIZE user cues if provided)
 - Complete macronutrient breakdown (protein, carbs with fiber/sugars, fats with saturated/unsaturated)
-- Micronutrients (vitamins and minerals)
+- Micronutrients (vitamins and minerals as descriptive text)
 - Visual observations
-- Portion estimation methodology
+- Portion estimation methodology (explain how you used user cues if provided)
 - Confidence assessment
 - Allergens and cautions
 
@@ -277,9 +286,16 @@ Return ONLY valid JSON matching the schema.`;
   }
 };
 
-export const analyzeImageWithVenice = async (image: ImagePart, foodName?: string): Promise<NutritionalReport> => {
-  // Using google-gemma-3-27b-it as primary, mistral-31-24b as fallback
-  const models = ['google-gemma-3-27b-it', 'mistral-31-24b'];
+export const analyzeImageWithVenice = async (
+  image: ImagePart, 
+  foodName?: string,
+  modelId?: string,
+  userCues?: string
+): Promise<NutritionalReport> => {
+  // Use specified model or default to google-gemma-3-27b-it with mistral-31-24b as fallback
+  const models = modelId 
+    ? [modelId, 'google-gemma-3-27b-it', 'mistral-31-24b'] 
+    : ['google-gemma-3-27b-it', 'mistral-31-24b'];
   
   for (let i = 0; i < models.length; i++) {
     const model = models[i];
@@ -294,10 +310,13 @@ export const analyzeImageWithVenice = async (image: ImagePart, foodName?: string
         const imageUrl = `data:${image.mimeType};base64,${image.data}`;
 
         // Step 1: Extract information (no strict schema)
-        console.log(`Step 1: Extracting nutritional information...${foodName ? ` (Food name: ${foodName})` : ''}`);
+        console.log(`Step 1: Extracting nutritional information...`, {
+          foodName: foodName || 'none',
+          hasCues: !!userCues
+        });
         let extractedInfo: string;
         try {
-          extractedInfo = await extractNutritionalInfo(model, imageUrl, foodName);
+          extractedInfo = await extractNutritionalInfo(model, imageUrl, foodName, userCues);
           console.log(`Step 1: Successfully extracted information (length: ${extractedInfo.length} chars)`);
         } catch (extractError: any) {
           console.error(`Model ${model} - Extraction failed:`, extractError.message);
