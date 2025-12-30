@@ -72,16 +72,6 @@ export const VENICE_VISION_MODELS: VeniceVisionModel[] = [
     privacy: 'anonymized',
     pricing: { input: 0.4, output: 1.6 },
   },
-  {
-    id: 'zai-org-glm-4.6v',
-    name: 'zai-org-glm-4.6v',
-    displayName: 'GLM 4.6V',
-    description: 'Multimodal model with strong reasoning and vision',
-    color: '#F59E0B', // Amber
-    supportsVision: true,
-    privacy: 'anonymized',
-    pricing: { input: 0.39, output: 1.13 },
-  },
 ];
 
 // Default models for multi-model comparison (most cost-effective)

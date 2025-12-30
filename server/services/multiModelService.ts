@@ -306,22 +306,40 @@ const analyzeWithModel = async (
     const imageUrl = `data:${image.mimeType};base64,${image.data}`;
 
     console.log(`[MultiModel] Starting analysis with ${modelConfig.displayName} (${modelConfig.id})...`);
+    console.log(`[MultiModel] ${modelConfig.displayName} - Image size: ${Math.round(image.data.length / 1024)}KB, MIME: ${image.mimeType}`);
 
     // Step 1: Extract nutritional information
-    const extractedInfo = await extractNutritionalInfo(
-      client,
-      modelConfig.id,
-      imageUrl,
-      foodName,
-      userCues
-    );
-    console.log(`[MultiModel] ${modelConfig.displayName} - Extraction complete (${extractedInfo.length} chars)`);
+    let extractedInfo: string;
+    try {
+      extractedInfo = await extractNutritionalInfo(
+        client,
+        modelConfig.id,
+        imageUrl,
+        foodName,
+        userCues
+      );
+      console.log(`[MultiModel] ${modelConfig.displayName} - Extraction complete (${extractedInfo.length} chars)`);
+    } catch (extractionError: any) {
+      console.error(`[MultiModel] ${modelConfig.displayName} - Extraction FAILED:`, extractionError.message);
+      if (extractionError.response) {
+        console.error(`[MultiModel] ${modelConfig.displayName} - API Response:`, JSON.stringify(extractionError.response.data || extractionError.response, null, 2));
+      }
+      throw extractionError;
+    }
 
     // Step 2: Format to schema
-    const nutritionReport = await formatToSchema(client, extractedInfo);
+    let nutritionReport: NutritionalReport;
+    try {
+      nutritionReport = await formatToSchema(client, extractedInfo);
+      console.log(`[MultiModel] ${modelConfig.displayName} - Formatting complete`);
+    } catch (formattingError: any) {
+      console.error(`[MultiModel] ${modelConfig.displayName} - Formatting FAILED:`, formattingError.message);
+      throw formattingError;
+    }
+
     const analysisTimeMs = Date.now() - startTime;
 
-    console.log(`[MultiModel] ${modelConfig.displayName} completed in ${analysisTimeMs}ms`);
+    console.log(`[MultiModel] ${modelConfig.displayName} completed successfully in ${analysisTimeMs}ms`);
 
     return {
       modelId: modelConfig.id,
@@ -335,7 +353,20 @@ const analyzeWithModel = async (
     };
   } catch (error: any) {
     const analysisTimeMs = Date.now() - startTime;
-    console.error(`[MultiModel] ${modelConfig.displayName} failed:`, error.message);
+
+    // Extract detailed error info
+    let errorMessage = error.message || 'Unknown error';
+    if (error.status) {
+      errorMessage = `HTTP ${error.status}: ${errorMessage}`;
+    }
+    if (error.code) {
+      errorMessage = `${error.code}: ${errorMessage}`;
+    }
+
+    console.error(`[MultiModel] ${modelConfig.displayName} FAILED after ${analysisTimeMs}ms:`, errorMessage);
+    if (error.stack) {
+      console.error(`[MultiModel] ${modelConfig.displayName} Stack:`, error.stack.split('\n').slice(0, 3).join('\n'));
+    }
 
     return {
       modelId: modelConfig.id,
@@ -346,7 +377,7 @@ const analyzeWithModel = async (
       analysisTimeMs,
       confidence: 0,
       status: 'error',
-      error: error.message,
+      error: errorMessage,
     };
   }
 };

@@ -129,7 +129,19 @@ export const analyzeImageMultiModel = async (
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `API error: ${response.statusText}`);
+      // Include model-specific error details if available
+      let errorMessage = errorData.message || `API error: ${response.statusText}`;
+      if (errorData.details && Array.isArray(errorData.details)) {
+        const modelErrors = errorData.details
+          .filter((d: any) => d.error)
+          .map((d: any) => `${d.model}: ${d.error}`)
+          .slice(0, 3); // Show first 3 errors
+        if (modelErrors.length > 0) {
+          errorMessage += ` [${modelErrors.join('; ')}]`;
+        }
+      }
+      console.error('Multi-model API error details:', errorData);
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();
