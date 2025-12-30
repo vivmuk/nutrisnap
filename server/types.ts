@@ -49,3 +49,23 @@ export interface LoggedFoodItem extends NutritionalReport {
     date: string; // ISO string
 }
 
+// Multi-model analysis types
+export interface ModelAnalysisResult {
+  modelId: string;
+  modelName: string;
+  displayName: string;
+  color: string;
+  nutritionReport: NutritionalReport;
+  analysisTimeMs: number;
+  confidence: number;
+  status: 'success' | 'error';
+  error?: string;
+}
+
+export interface MultiModelAnalysisResponse {
+  results: ModelAnalysisResult[];
+  totalTimeMs: number;
+  successCount: number;
+  errorCount: number;
+}
+

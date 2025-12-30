@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { analyzeImage } from './routes/analyze.js';
+import { analyzeMulti } from './routes/analyzeMulti.js';
 import { foodLogsRouter } from './routes/foodLogs.js';
 import { modelsRouter } from './routes/models.js';
 import { connectDB } from './config/database.js';
@@ -18,6 +19,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Routes
 app.use('/api/analyze', analyzeImage);
+app.use('/api/analyze-multi', analyzeMulti);
 app.use('/api/food-logs', foodLogsRouter);
 app.use('/api/models', modelsRouter);
 
@@ -35,6 +37,7 @@ app.get('/', (req, res) => {
     endpoints: {
       health: '/health',
       analyze: '/api/analyze',
+      analyzeMulti: '/api/analyze-multi',
       foodLogs: '/api/food-logs',
       models: '/api/models'
     }

@@ -1,8 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { getAvailableModels, VeniceModel } from '../services/imageService';
+import { getMultiModelInfo, MultiModelInfo } from '../services/imageService';
 
 interface ImageSelectorProps {
-  onStartAnalysis: (file: File, foodName?: string, modelId?: string, userCues?: string) => void;
+  onStartAnalysis: (file: File, foodName?: string, modelId?: string, userCues?: string, useMultiModel?: boolean) => void;
   onManualAdd: () => void;
   onSwitchToDashboard: () => void;
 }
@@ -29,22 +29,24 @@ const ChartBarIcon: React.FC<{ className?: string }> = ({ className }) => (
 );
 
 
+const SparklesIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+  </svg>
+);
+
 const ImageSelector: React.FC<ImageSelectorProps> = ({ onStartAnalysis, onManualAdd, onSwitchToDashboard }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const [foodName, setFoodName] = useState<string>('');
   const [userCues, setUserCues] = useState<string>('');
-  const [selectedModel, setSelectedModel] = useState<string>('');
-  const [availableModels, setAvailableModels] = useState<VeniceModel[]>([]);
+  const [availableModels, setAvailableModels] = useState<MultiModelInfo[]>([]);
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
 
   useEffect(() => {
     const loadModels = async () => {
-      const models = await getAvailableModels();
-      setAvailableModels(models);
-      if (models.length > 0) {
-        setSelectedModel(models[0].id);
-      }
+      const info = await getMultiModelInfo();
+      setAvailableModels(info.available);
     };
     loadModels();
   }, []);
@@ -52,11 +54,13 @@ const ImageSelector: React.FC<ImageSelectorProps> = ({ onStartAnalysis, onManual
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // Always use multi-model analysis by default
       onStartAnalysis(
-        file, 
+        file,
         foodName.trim() || undefined,
-        selectedModel || undefined,
-        userCues.trim() || undefined
+        undefined, // modelId not used for multi-model
+        userCues.trim() || undefined,
+        true // useMultiModel = true
       );
       setFoodName('');
       setUserCues('');
@@ -70,6 +74,30 @@ const ImageSelector: React.FC<ImageSelectorProps> = ({ onStartAnalysis, onManual
           <h3 className="mt-2 text-xl font-medium text-gray-200">Analyze a New Meal</h3>
           <p>Upload a photo or use your camera.</p>
         </div>
+
+      {/* Multi-model info badge */}
+      {availableModels.length > 0 && (
+        <div className="bg-indigo-900/30 border border-indigo-700/50 rounded-lg px-4 py-3 w-full max-w-md">
+          <div className="flex items-center gap-2 text-indigo-300 mb-2">
+            <SparklesIcon className="w-5 h-5" />
+            <span className="font-semibold">Multi-Model Analysis</span>
+          </div>
+          <p className="text-sm text-gray-400">
+            Your image will be analyzed by {availableModels.length} AI model{availableModels.length !== 1 ? 's' : ''} in parallel:
+          </p>
+          <div className="flex flex-wrap gap-2 mt-2">
+            {availableModels.map((model) => (
+              <span
+                key={model.id}
+                className="px-2 py-1 rounded-full text-xs font-medium text-white"
+                style={{ backgroundColor: model.color + '40', borderColor: model.color, borderWidth: 1 }}
+              >
+                {model.displayName}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Optional food name input */}
       <div className="w-full max-w-md">
@@ -93,10 +121,10 @@ const ImageSelector: React.FC<ImageSelectorProps> = ({ onStartAnalysis, onManual
           onClick={() => setShowAdvanced(!showAdvanced)}
           className="text-sm text-brand-primary hover:text-brand-secondary transition-colors flex items-center gap-2"
         >
-          <svg 
+          <svg
             className={`h-4 w-4 transition-transform ${showAdvanced ? 'rotate-90' : ''}`}
-            fill="none" 
-            viewBox="0 0 24 24" 
+            fill="none"
+            viewBox="0 0 24 24"
             stroke="currentColor"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -108,30 +136,6 @@ const ImageSelector: React.FC<ImageSelectorProps> = ({ onStartAnalysis, onManual
       {/* Advanced Options Panel */}
       {showAdvanced && (
         <div className="w-full max-w-md space-y-4 animate-slide-in-up">
-          {/* Model Selection */}
-          <div>
-            <label htmlFor="modelSelect" className="block text-sm font-medium text-gray-300 mb-2">
-              AI Vision Model
-            </label>
-            <select
-              id="modelSelect"
-              value={selectedModel}
-              onChange={(e) => setSelectedModel(e.target.value)}
-              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
-            >
-              {availableModels.map((model) => (
-                <option key={model.id} value={model.id}>
-                  {model.name}
-                </option>
-              ))}
-            </select>
-            {selectedModel && availableModels.find(m => m.id === selectedModel) && (
-              <p className="mt-1 text-xs text-gray-500">
-                {availableModels.find(m => m.id === selectedModel)?.description}
-              </p>
-            )}
-          </div>
-
           {/* User Measurement Cues */}
           <div>
             <label htmlFor="userCues" className="block text-sm font-medium text-gray-300 mb-2">
