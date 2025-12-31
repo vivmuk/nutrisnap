@@ -74,11 +74,8 @@ export const VENICE_VISION_MODELS: VeniceVisionModel[] = [
   },
 ];
 
-// Default models for multi-model comparison (most cost-effective)
+// Default model for analysis - using Gemini 3 Flash only
 export const DEFAULT_COMPARISON_MODELS = [
-  'mistral-31-24b',
-  'google-gemma-3-27b-it',
-  'grok-41-fast',
   'gemini-3-flash-preview',
 ];
 

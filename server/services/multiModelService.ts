@@ -170,12 +170,8 @@ Return ONLY valid JSON matching the schema.`;
   try {
     const data = JSON.parse(jsonText);
 
-    // Validate and transform to ensure consistent structure
-    if (data.macroNutrients && typeof data.macroNutrients.protein === 'number') {
-      return data as NutritionalReport;
-    }
-
-    // Transform if needed
+    // Always run through transformToSchema to ensure all required fields have values
+    // This handles cases where the API returns data with missing optional fields
     return transformToSchema(data);
   } catch (parseError: any) {
     // Try to fix truncated JSON
@@ -191,11 +187,21 @@ Return ONLY valid JSON matching the schema.`;
 };
 
 /**
- * Transform response to match expected schema
+ * Helper to ensure a value is a non-empty string
  */
+const ensureString = (value: any, defaultValue: string): string => {
+  if (typeof value === 'string' && value.trim().length > 0) {
+    return value.trim();
+  }
+  if (Array.isArray(value) && value.length > 0) {
+    return value.join(', ');
+  }
+  return defaultValue;
+};
+
 const transformToSchema = (response: any): NutritionalReport => {
   return {
-    dishName: response.dish_name || response.dishName || 'Unknown Dish',
+    dishName: ensureString(response.dish_name || response.dishName, 'Unknown Dish'),
     totalCalories: Math.round(response.total_calories || response.totalCalories || 0),
     macroNutrients: {
       protein: Math.round(response.macroNutrients?.protein || 0),
@@ -211,15 +217,11 @@ const transformToSchema = (response: any): NutritionalReport => {
       },
     },
     microNutrients: {
-      vitamins: typeof response.microNutrients?.vitamins === 'string'
-        ? response.microNutrients.vitamins
-        : 'Not specified',
-      minerals: typeof response.microNutrients?.minerals === 'string'
-        ? response.microNutrients.minerals
-        : 'Not specified',
+      vitamins: ensureString(response.microNutrients?.vitamins, 'Not specified'),
+      minerals: ensureString(response.microNutrients?.minerals, 'Not specified'),
     },
     items: (response.items || []).map((item: any) => ({
-      name: item.name || 'Unknown Item',
+      name: ensureString(item.name, 'Unknown Item'),
       calories: Math.round(item.calories || 0),
       weightGrams: Math.round(item.weightGrams || item.weight_g || 0),
       macronutrients: {
@@ -238,10 +240,10 @@ const transformToSchema = (response: any): NutritionalReport => {
     })),
     notes: Array.isArray(response.notes) ? response.notes : [],
     analysis: {
-      visualObservations: response.analysis?.visualObservations || 'No observations',
-      portionEstimate: response.analysis?.portionEstimate || 'Estimated based on visual analysis',
+      visualObservations: ensureString(response.analysis?.visualObservations, 'Visual analysis performed on food image'),
+      portionEstimate: ensureString(response.analysis?.portionEstimate, 'Estimated based on visual analysis'),
       confidence: Math.round(response.analysis?.confidence || 75),
-      confidenceNarrative: response.analysis?.confidenceNarrative || 'Analysis confidence based on image clarity',
+      confidenceNarrative: ensureString(response.analysis?.confidenceNarrative, 'Analysis confidence based on image clarity'),
       cautions: Array.isArray(response.analysis?.cautions) ? response.analysis.cautions : [],
     },
   };
