@@ -43,8 +43,8 @@ const NutritionReportDisplay: React.FC<NutritionReportDisplayProps> = ({ report,
     );
   }
 
-  const { totalCalories, macroNutrients, dishName, items, notes, analysis, image } = report;
-  
+  const { totalCalories, macroNutrients, microNutrients, dishName, items, notes, analysis, image } = report;
+
   const macroData = [
     { name: 'Protein', value: macroNutrients?.protein || 0 },
     { name: 'Carbs', value: macroNutrients?.carbohydrates?.total || 0 },
@@ -121,16 +121,35 @@ const NutritionReportDisplay: React.FC<NutritionReportDisplayProps> = ({ report,
         </div>
       </div>
 
+      {/* Micronutrients Section */}
+      {microNutrients && (
+        <div className="bg-gray-800/50 p-6 rounded-2xl">
+          <h3 className="text-xl font-semibold mb-4 text-white">Micronutrients</h3>
+          <div className="grid md:grid-cols-2 gap-4 text-gray-300">
+            <div>
+              <p className="text-sm text-gray-400 mb-1">Vitamins</p>
+              <p className="text-base">{microNutrients.vitamins || 'Not specified'}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-400 mb-1">Minerals</p>
+              <p className="text-base">{microNutrients.minerals || 'Not specified'}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid md:grid-cols-2 gap-6">
         <div className="bg-gray-800/50 p-6 rounded-2xl">
             <h3 className="text-xl font-semibold mb-4 text-white">Nutritional Insights</h3>
-            <ul className="list-disc list-inside space-y-2 text-gray-300">
-                {notes.map((note, index) => <li key={index}>{note}</li>)}
-            </ul>
+            {notes && notes.length > 0 ? (
+              <ul className="list-disc list-inside space-y-2 text-gray-300">
+                  {notes.map((note, index) => <li key={index}>{note}</li>)}
+              </ul>
+            ) : <p className="text-gray-400">No additional insights available.</p>}
         </div>
         <div className="bg-yellow-900/40 border border-yellow-700 p-6 rounded-2xl">
             <h3 className="text-xl font-semibold mb-4 text-yellow-200 flex items-center gap-2"><CautionIcon className="w-6 h-6"/>Allergens & Cautions</h3>
-            {analysis.cautions.length > 0 ? (
+            {analysis.cautions && analysis.cautions.length > 0 ? (
                 <ul className="list-disc list-inside space-y-2 text-yellow-300">
                     {analysis.cautions.map((caution, index) => <li key={index}>{caution}</li>)}
                 </ul>

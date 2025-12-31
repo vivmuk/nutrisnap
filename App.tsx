@@ -1,26 +1,23 @@
 import React, { useState, useCallback } from 'react';
-import { NutritionalReport, ModelAnalysisResult } from './types';
-import { analyzeImage, analyzeImageMultiModel } from './services/imageService';
+import { NutritionalReport } from './types';
+import { analyzeImageMultiModel } from './services/imageService';
 import ImageSelector from './components/ImageSelector';
 import NutritionReportDisplay from './components/NutritionReportDisplay';
-import ModelComparisonPanel from './components/ModelComparisonPanel';
 import LoadingSpinner from './components/LoadingSpinner';
 import Dashboard from './components/Dashboard';
 import ManualAddForm from './components/ManualAddForm';
 import useFoodLog from './hooks/useFoodLog';
 
 type Tab = 'ANALYZER' | 'DASHBOARD';
-type AnalysisView = 'SELECT' | 'ANALYZING' | 'MULTI_ANALYZING' | 'REPORT' | 'MULTI_REPORT' | 'ERROR' | 'MANUAL_ADD';
+type AnalysisView = 'SELECT' | 'ANALYZING' | 'REPORT' | 'ERROR' | 'MANUAL_ADD';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('ANALYZER');
   const [analysisView, setAnalysisView] = useState<AnalysisView>('SELECT');
 
   const [report, setReport] = useState<NutritionalReport | null>(null);
-  const [multiModelResults, setMultiModelResults] = useState<ModelAnalysisResult[]>([]);
-  const [multiModelTotalTime, setMultiModelTotalTime] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
-  const [currentImage, setCurrentImage] = useState<string | null>(null); // Store current image
+  const [currentImage, setCurrentImage] = useState<string | null>(null);
   const foodLog = useFoodLog();
 
   const fileToBase64 = (file: File): Promise<string> => {
@@ -38,9 +35,9 @@ const App: React.FC = () => {
   const handleStartAnalysis = useCallback(async (
     file: File,
     foodName?: string,
-    modelId?: string,
+    _modelId?: string,
     userCues?: string,
-    useMultiModel: boolean = true // Default to multi-model analysis
+    _useMultiModel: boolean = true
   ) => {
     if (!file) {
       setError('Please select an image first.');
@@ -50,7 +47,6 @@ const App: React.FC = () => {
 
     setError(null);
     setReport(null);
-    setMultiModelResults([]);
 
     try {
       const base64Data = await fileToBase64(file);
@@ -60,37 +56,28 @@ const App: React.FC = () => {
       const imageDataUrl = `data:${mimeType};base64,${base64Data}`;
       setCurrentImage(imageDataUrl);
 
-      if (useMultiModel) {
-        // Multi-model analysis
-        setAnalysisView('MULTI_ANALYZING');
+      setAnalysisView('ANALYZING');
 
-        const result = await analyzeImageMultiModel(
-          { data: base64Data, mimeType },
-          foodName,
-          userCues
-        );
+      // Use the multi-model API (now configured for single model: Gemini 3 Flash)
+      const result = await analyzeImageMultiModel(
+        { data: base64Data, mimeType },
+        foodName,
+        userCues
+      );
 
-        setMultiModelResults(result.results);
-        setMultiModelTotalTime(result.totalTimeMs);
-        setAnalysisView('MULTI_REPORT');
-      } else {
-        // Single model analysis (legacy)
-        setAnalysisView('ANALYZING');
-
-        const result = await analyzeImage(
-          { data: base64Data, mimeType },
-          foodName,
-          modelId,
-          userCues
-        );
-        // Add image to the report
-        const reportWithImage = { ...result, image: imageDataUrl };
+      // Get the first (and only) successful result
+      const successfulResult = result.results.find(r => r.status === 'success');
+      if (successfulResult) {
+        // Add image to the report for display
+        const reportWithImage = { ...successfulResult.nutritionReport, image: imageDataUrl };
         setReport(reportWithImage);
         setAnalysisView('REPORT');
+      } else {
+        throw new Error('Analysis failed. Please try again with a different image.');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError('Failed to analyze the image. The AI may be unable to process this specific image, or an API error occurred. Please try a different image.');
+      setError(err.message || 'Failed to analyze the image. Please try a different image.');
       setAnalysisView('ERROR');
       setCurrentImage(null);
     }
@@ -117,25 +104,12 @@ const App: React.FC = () => {
       setAnalysisView('ERROR');
     }
   };
-  
+
   const handleResetAnalysis = () => {
     setReport(null);
-    setMultiModelResults([]);
-    setMultiModelTotalTime(0);
     setError(null);
     setCurrentImage(null);
     setAnalysisView('SELECT');
-  };
-
-  const handleSelectMultiModelResult = async (selectedReport: NutritionalReport) => {
-    try {
-      await foodLog.addFoodLog(selectedReport);
-      handleResetAnalysis();
-    } catch (error) {
-      console.error('Failed to add food log:', error);
-      setError('Failed to save food log. Please try again.');
-      setAnalysisView('ERROR');
-    }
   };
   
   const renderAnalyzerContent = () => {
@@ -149,31 +123,16 @@ const App: React.FC = () => {
       case 'MANUAL_ADD':
         return <ManualAddForm onAdd={handleAddManualLog} onCancel={() => setAnalysisView('SELECT')} />;
       case 'ANALYZING':
-        return <LoadingSpinner />;
-      case 'MULTI_ANALYZING':
         return (
           <div className="text-center py-12">
             <LoadingSpinner />
-            <p className="text-gray-400 mt-4 text-lg">Running multi-model analysis...</p>
-            <p className="text-gray-500 text-sm mt-2">Comparing results from multiple AI models</p>
+            <p className="text-gray-400 mt-4 text-lg">Analyzing your meal...</p>
+            <p className="text-gray-500 text-sm mt-2">Our AI nutritionist is evaluating your food</p>
           </div>
         );
       case 'REPORT':
         if (report) {
           return <NutritionReportDisplay report={report} onAddToLog={handleAddToLog} onCancel={handleResetAnalysis} />;
-        }
-        return null;
-      case 'MULTI_REPORT':
-        if (multiModelResults.length > 0) {
-          return (
-            <ModelComparisonPanel
-              results={multiModelResults}
-              currentImage={currentImage}
-              onSelectResult={handleSelectMultiModelResult}
-              onCancel={handleResetAnalysis}
-              totalTimeMs={multiModelTotalTime}
-            />
-          );
         }
         return null;
       case 'ERROR':
