@@ -1,26 +1,69 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <link rel="shortcut icon" href="/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NutriSnap - AI Calorie Tracker</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script type="importmap">
-{
-  "imports": {
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "react": "https://aistudiocdn.com/react@^19.2.0",
-    "recharts": "https://aistudiocdn.com/recharts@^3.4.1",
-    "date-fns": "https://aistudiocdn.com/date-fns@^3.6.0"
-  }
-}
-  </script>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NutriSnap</title>
+<style>
+:root{--bg:#0a0a0a;--ink:#fafafa;--dim:#666;--acc:#00ff9c}
+*{margin:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:ui-monospace,Menlo,monospace;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:48px 20px}
+h1{font-size:22px;letter-spacing:.25em;text-transform:uppercase;font-weight:600}
+h1 em{color:var(--acc);font-style:normal}
+p.sub{color:var(--dim);font-size:13px;margin-top:8px}
+#drop{margin-top:40px;width:min(420px,90vw);aspect-ratio:1;border:1px dashed #333;border-radius:12px;display:grid;place-items:center;color:var(--dim);font-size:13px;cursor:pointer;transition:.2s;overflow:hidden}
+#drop:hover{border-color:var(--acc);color:var(--acc)}
+#drop img{width:100%;height:100%;object-fit:cover}
+input{display:none}
+button{margin-top:24px;background:var(--acc);color:#000;border:0;font:inherit;padding:12px 28px;border-radius:99px;cursor:pointer;display:none}
+#result{margin-top:32px;width:min(420px,90vw);display:none}
+.item{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #1c1c1c;font-size:14px}
+.item b{color:var(--acc)}
+.total{margin-top:16px;font-size:18px}
+.err{color:#ff5555;font-size:13px;margin-top:16px;display:none}
+</style>
 </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
-  </body>
+<body>
+<h1>Nutri<em>Snap</em></h1>
+<p class="sub">snap a meal · read the numbers</p>
+<div id="drop">drop or click to add a photo</div>
+<input type="file" id="file" accept="image/*">
+<button id="go">analyze</button>
+<div id="result"><div id="items"></div><div class="item total"><span>total kcal</span><b id="kcal">0</b></div></div>
+<div class="err" id="err"></div>
+<script>
+const drop=document.getElementById('drop'),file=document.getElementById('file'),go=document.getElementById('go'),result=document.getElementById('result'),err=document.getElementById('err');
+let img=null;
+const KEY=()=>localStorage.getItem('venice_user_api_key')||'';
+drop.onclick=()=>file.click();
+drop.ondragover=e=>e.preventDefault();
+drop.ondrop=e=>e.preventDefault();
+drop.ondrop=e=>{e.preventDefault();if(e.dataTransfer.files[0])load(e.dataTransfer.files[0])};
+file.onchange=()=>file.files[0]&&load(file.files[0]);
+function load(f){const r=new FileReader();r.onload=()=>{img=r.result;drop.innerHTML='';const im=new Image();im.src=img;drop.appendChild(im);go.style.display='block'};r.readAsDataURL(f)}
+async function analyze(){
+  err.style.display='none';
+  if(!KEY()){askKey();return}
+  go.disabled=true;go.textContent='analyzing…';
+  try{
+    const res=await fetch('https://api.venice.ai/api/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+KEY()},body:JSON.stringify({model:'mistral-31-24b',messages:[{role:'user',content:[{type:'text',text:'Identify every food item. Respond ONLY as JSON: {"items":[{"food":string,"kcal":number}]}]}'},{type:'image_url',image_url:{url:img}}]})});
+    const j=await res.json();
+    if(j.error)throw new Error(j.error.message||'API error');
+    const txt=j.choices[0].message.content.replace(/```json|```/g,'');
+    const parsed=JSON.parse(txt);
+    const items=document.getElementById('items');items.innerHTML='';
+    let kcal=0;
+    parsed.items.forEach(it=>{kcal+=it.kcal;const d=document.createElement('div');d.className='item';d.innerHTML='<span>'+it.food+'</span><b>'+it.kcal+' kcal</b>';items.appendChild(d)});
+    document.getElementById('kcal').textContent=kcal;
+    result.style.display='block';
+  }catch(e){err.textContent=e.message;err.style.display='block'}
+  go.disabled=false;go.textContent='analyze';
+}
+function askKey(){
+  const k=prompt('Paste your Venice API key:');
+  if(k){localStorage.setItem('venice_user_api_key',k);analyze()}
+}
+go.onclick=analyze;
+</script>
+</body>
 </html>
