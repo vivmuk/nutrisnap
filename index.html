@@ -46,7 +46,7 @@ async function analyze(){
   if(!KEY()){askKey();return}
   go.disabled=true;go.textContent='analyzing…';
   try{
-    const res=await fetch('https://api.venice.ai/api/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+KEY()},body:JSON.stringify({model:'mistral-31-24b',messages:[{role:'user',content:[{type:'text',text:'Identify every food item. Respond ONLY as JSON: {"items":[{"food":string,"kcal":number}]}]}'},{type:'image_url',image_url:{url:img}}]})});
+    const res=await fetch('https://api.venice.ai/api/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+KEY()},body:JSON.stringify({model:'mistral-31-24b',messages:[{role:'user',content:[{type:'text',text:'Identify every food item. Respond ONLY as JSON: {"items":[{"food":string,"kcal":number}]}]}'},{type:'image_url',image_url:{url:img}}]}]})});
     const j=await res.json();
     if(j.error)throw new Error(j.error.message||'API error');
     const txt=j.choices[0].message.content.replace(/```json|```/g,'');
